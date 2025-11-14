@@ -1,7 +1,10 @@
 name: Java CI
+
 on:
   push:
     branches: [ "main" ]
+  pull_request:
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -11,5 +14,5 @@ jobs:
         with:
           distribution: temurin
           java-version: 21
-      - name: Build
-        run: echo "Placeholder"
+      - name: Build with Maven
+        run: mvn -B package --file pom.xml

@@ -1,5 +1,20 @@
 *.class
 *.jar
 *.war
+
+# Maven
+target/
+.mvn/
+.idea/
+*.iml
+
+# OS
+.DS_Store
+
+# Logs
+logs/
 *.log
-/target
+
+# VSCode / IntelliJ
+.vscode/
+*.swp
