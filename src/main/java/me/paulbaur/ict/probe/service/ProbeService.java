@@ -1,0 +1,12 @@
+package me.paulbaur.ict.probe.service;
+
+import me.paulbaur.ict.probe.domain.ProbeResult;
+
+import java.util.List;
+
+public interface ProbeService {
+
+    void runScheduledProbes();
+
+    List<ProbeResult> getRecentResults(String targetId, int limit);
+}
