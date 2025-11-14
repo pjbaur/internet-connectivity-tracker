@@ -1,3 +1,11 @@
 spring:
   application:
-    name: connectivity-tracker
+    name: internet-connectivity-tracker
+
+ict:
+  probe:
+    interval-ms: 1000       # 1 second default
+  elasticsearch:
+    host: localhost
+    port: 9200
+    index: probe-results

@@ -1,4 +1,4 @@
-package com.example.connectivity;
+package me.paulbaur.ict;
 
 import org.junit.jupiter.api.Test;
 

@@ -1,0 +1,31 @@
+services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:${ES_VERSION:-8.15.0}
+    container_name: ict-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    ports:
+      - "9200:9200"
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:${ES_VERSION:-8.15.0}
+    container_name: ict-kibana
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    ports:
+      - "5601:5601"
+    depends_on:
+      - elasticsearch
+
+  app:
+    build: .
+    container_name: ict-app
+    environment:
+      - ICT_ELASTICSEARCH_HOST=elasticsearch
+      - ICT_ELASTICSEARCH_PORT=9200
+    ports:
+      - "8080:8080"
+    depends_on:
+      - elasticsearch
