@@ -51,7 +51,7 @@ public class ElasticProbeRepository implements ProbeRepository {
             SearchRequest request = new SearchRequest.Builder()
                     .index(index)
                     .query(QueryBuilders.term(
-                            t -> t.field("targetId").value(targetId)")
+                            t -> t.field("targetId").value(targetId)
                             ))
                     .sort(s -> s.field(f -> f.field("timestamp").order(SortOrder.Desc)))
                     .size(limit)

@@ -9,7 +9,7 @@
     <artifactId>internet-connectivity-tracker</artifactId>
     <version>0.1.0-SHAPSHOT</version>
     <name>Internet Connectivity Tracker</name>
-    <description>Internet Connectivity Tracker - TCP probe + Elastichsearch</description>
+    <description>Internet Connectivity Tracker - TCP probe + Elasticsearch</description>
 
     <parent>
         <groupId>org.springframework.boot</groupId>
