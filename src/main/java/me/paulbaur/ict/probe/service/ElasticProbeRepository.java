@@ -7,6 +7,7 @@ import co.elastic.clients.elasticsearch.core.IndexRequest;
 import co.elastic.clients.elasticsearch.core.SearchRequest;
 import co.elastic.clients.elasticsearch.core.SearchResponse;
 
+import co.elastic.clients.json.JsonData;
 import me.paulbaur.ict.probe.domain.ProbeResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -78,8 +79,8 @@ public class ElasticProbeRepository implements ProbeRepository {
                             .must(QueryBuilders.term(t -> t.field("targetId").value(targetId)))
                             .must(QueryBuilders.range(r -> r
                                     .field("timestamp")
-                                    .gte(start.toString())
-                                    .lte(end.toString())
+                                    .gte(JsonData.of(start.toString()))
+                                    .lte(JsonData.of(end.toString()))
                             ))
                     ))
                     .sort(s -> s.field(f -> f.field("timestamp").order(SortOrder.Asc)))
