@@ -1,7 +1,7 @@
 package me.paulbaur.ict.probe.service;
 
 import me.paulbaur.ict.target.domain.Target;
-import me.paulbaur.ict.target.service.InMemoryTargetRepository;
+import me.paulbaur.ict.target.service.TargetRepository;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -10,10 +10,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Component
 public class RoundRobinTargetSelector {
 
-    private final InMemoryTargetRepository targetRepository;
+    private final TargetRepository targetRepository;
     private final AtomicInteger counter = new AtomicInteger(0);
 
-    public RoundRobinTargetSelector(InMemoryTargetRepository targetRepository) {
+    public RoundRobinTargetSelector(TargetRepository targetRepository) {
         this.targetRepository = targetRepository;
     }
 

@@ -1,5 +1,7 @@
 package me.paulbaur.ict.probe.service;
 
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import me.paulbaur.ict.probe.domain.ProbeRequest;
 import me.paulbaur.ict.probe.domain.ProbeResult;
 import me.paulbaur.ict.probe.service.strategy.ProbeStrategy;
@@ -12,6 +14,8 @@ import java.util.Collections;
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
+@Slf4j
 public class ProbeServiceImpl implements ProbeService {
 
     private static final Logger log = LoggerFactory.getLogger(ProbeServiceImpl.class);
@@ -46,6 +50,7 @@ public class ProbeServiceImpl implements ProbeService {
             );
 
             ProbeResult result = probeStrategy.probe(request);
+            probeRepository.save(result);
         } catch (Exception ex) {
             // Critical: never let this escape to @Scheduled
             log.error("Unexpected error in scheduled probe execution", ex);
@@ -59,5 +64,16 @@ public class ProbeServiceImpl implements ProbeService {
                 log.error("Failed to retrieve recent results for {}", targetId, ex);
                 return Collections.emptyList();
         }
+    }
+
+    @Override
+    public void probe(String target) {
+        // normal probing workflow
+        // get result from strategy, persist to ES, etc.
+    }
+
+    @Override
+    public ProbeResult getLatestStatus() {
+        return probeRepository.findLatest().orElse(null);
     }
 }

@@ -16,9 +16,13 @@ import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public class ElasticProbeRepository implements ProbeRepository {
+
+    private static final String INDEX = "probe-results";
+
     private static final Logger log = LoggerFactory.getLogger(ElasticProbeRepository.class);
 
     private final ElasticsearchClient client;
@@ -113,6 +117,31 @@ public class ElasticProbeRepository implements ProbeRepository {
         } catch (Exception ex) {
             log.error("Failed to fetch history for {} between {} - {}", targetId, start, end, ex);
             return List.of();
+        }
+    }
+
+    @Override
+    public Optional<ProbeResult> findLatest() {
+        try {
+            SearchResponse<ProbeResult> response = client.search(s -> s
+                    .index(INDEX)
+                    .size(1)
+                    .sort(sort -> sort
+                            .field(f -> f
+                                    .field("timesteamp")
+                                    .order(SortOrder.Desc)
+                            ))
+                    , ProbeResult.class);
+
+            if (response.hits().hits().isEmpty()) {
+                return Optional.empty();
+            }
+
+            return Optional.ofNullable(response.hits().hits().get(0).source());
+
+        } catch (Exception ex) {
+            log.error("Failed to fetch latest probe result", ex);
+            return Optional.empty();
         }
     }
 }

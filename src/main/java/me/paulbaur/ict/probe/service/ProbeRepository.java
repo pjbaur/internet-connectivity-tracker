@@ -4,6 +4,7 @@ import me.paulbaur.ict.probe.domain.ProbeResult;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 
 public interface ProbeRepository {
 
@@ -16,4 +17,6 @@ public interface ProbeRepository {
             Instant start,
             Instant end
     );
+
+    Optional<ProbeResult> findLatest();
 }
