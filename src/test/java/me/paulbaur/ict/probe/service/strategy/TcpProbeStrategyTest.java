@@ -20,6 +20,7 @@ public class TcpProbeStrategyTest {
         assertThat(result.status()).isIn(ProbeStatus.UP, ProbeStatus.DOWN);
     }
 
+    @Test
     void probeReturnsDownForInvalidPort() {
         ProbeRequest request = new ProbeRequest("t1", "localhost", 65000);
 
