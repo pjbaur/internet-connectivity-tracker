@@ -12,8 +12,8 @@ public class StatusController {
 
     private final ProbeService probeService;
 
-    @GetMapping("/api/status")
-    public ProbeResult getStatus() {
-        return probeService.getLatestStatus();
+    @GetMapping("/api/probe-results/latest")
+    public ProbeResult getProbeResult() {
+        return probeService.getLatestProbeResult();
     }
 }

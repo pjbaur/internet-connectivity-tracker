@@ -2,10 +2,7 @@ package me.paulbaur.ict.probe.api;
 
 import me.paulbaur.ict.probe.domain.ProbeResult;
 import me.paulbaur.ict.probe.service.ProbeService;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -29,6 +26,7 @@ public class ProbeController {
      * @param limit the maximum number of results to return
      * @return a list of probe results
      */
+    @GetMapping("/targets/{targetId}/recent")
     public List<ProbeResult> recent(
             @PathVariable String targetId,
             @RequestParam(defaultValue = "20") int limit

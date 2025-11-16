@@ -8,7 +8,7 @@ public interface ProbeService {
 
     void probe(String target);
 
-    ProbeResult getLatestStatus();
+    ProbeResult getLatestProbeResult();
 
     void runScheduledProbes();
 

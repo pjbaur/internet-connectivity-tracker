@@ -18,20 +18,9 @@ import java.util.List;
 @Slf4j
 public class ProbeServiceImpl implements ProbeService {
 
-    private static final Logger log = LoggerFactory.getLogger(ProbeServiceImpl.class);
-
     private final RoundRobinTargetSelector targetSelector;
     private final ProbeStrategy probeStrategy;
     private final ProbeRepository probeRepository;
-
-    public ProbeServiceImpl(
-            RoundRobinTargetSelector targetSelector,
-            ProbeStrategy probeStrategy,
-            ProbeRepository probeRepository) {
-        this.targetSelector = targetSelector;
-        this.probeStrategy = probeStrategy;
-        this.probeRepository = probeRepository;
-    }
 
     @Override
     public void runScheduledProbes() {
@@ -73,7 +62,7 @@ public class ProbeServiceImpl implements ProbeService {
     }
 
     @Override
-    public ProbeResult getLatestStatus() {
+    public ProbeResult getLatestProbeResult() {
         return probeRepository.findLatest().orElse(null);
     }
 }
