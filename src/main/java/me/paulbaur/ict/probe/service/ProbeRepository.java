@@ -1,11 +1,13 @@
 package me.paulbaur.ict.probe.service;
 
 import me.paulbaur.ict.probe.domain.ProbeResult;
+import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
+@Repository
 public interface ProbeRepository {
 
     void save(ProbeResult result);

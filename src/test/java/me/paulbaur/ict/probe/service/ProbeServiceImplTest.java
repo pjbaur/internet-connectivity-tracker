@@ -4,6 +4,7 @@ import me.paulbaur.ict.probe.domain.ProbeRequest;
 import me.paulbaur.ict.probe.domain.ProbeResult;
 import me.paulbaur.ict.probe.service.strategy.ProbeStrategy;
 import me.paulbaur.ict.target.domain.Target;
+import me.paulbaur.ict.target.service.TargetRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -16,15 +17,16 @@ public class ProbeServiceImplTest {
 
     private RoundRobinTargetSelector selector;
     private ProbeStrategy strategy;
-    private ProbeRepository repository;
+    private ProbeRepository probeRepository;
     private ProbeServiceImpl service;
+    private TargetRepository targetRepository;
 
     @BeforeEach
     void setUp() {
         selector = mock(RoundRobinTargetSelector.class);
         strategy = mock(ProbeStrategy.class);
-        repository = mock(ProbeRepository.class);
-        service = new ProbeServiceImpl(selector, strategy, repository);
+        probeRepository = mock(ProbeRepository.class);
+        service = new ProbeServiceImpl(selector, strategy, probeRepository, targetRepository);
     }
 
     @Test
@@ -50,7 +52,7 @@ public class ProbeServiceImplTest {
         // Then
         verify(selector).nextTarget();
         verify(strategy).probe(any(ProbeRequest.class));
-        verify(repository).save(result);
+        verify(probeRepository).save(result);
     }
 
     @Test
@@ -64,6 +66,6 @@ public class ProbeServiceImplTest {
         // Then - srategy and repository must not be invoked
         verify(selector).nextTarget();
         verifyNoInteractions(strategy);
-        verifyNoInteractions(repository);
+        verifyNoInteractions(probeRepository);
     }
 }

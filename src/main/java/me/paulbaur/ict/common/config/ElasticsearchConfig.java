@@ -5,16 +5,25 @@ import co.elastic.clients.transport.ElasticsearchTransport;
 import co.elastic.clients.transport.rest_client.RestClientTransport;
 import org.apache.http.HttpHost;
 import org.elasticsearch.client.RestClient;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class ElasticsearchConfig {
 
+    @Value("${ict.elasticsearch.host}")
+    private String host;
+
+    @Value("${ict.elasticsearch.port}")
+    private int port;
+
+    @Value("${ict.elasticsearch.scheme}")
+    private String scheme;
+
     @Bean
     public RestClient restClient() {
-        // TODO: externalize host/port via config
-        return RestClient.builder(new HttpHost("localhost", 9200, "http")).build();
+        return RestClient.builder(new HttpHost(host, port, scheme)).build();
     }
 
     @Bean

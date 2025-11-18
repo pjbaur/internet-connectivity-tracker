@@ -18,10 +18,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
-@Repository
 public class ElasticProbeRepository implements ProbeRepository {
-
-    private static final String INDEX = "probe-results";
 
     private static final Logger log = LoggerFactory.getLogger(ElasticProbeRepository.class);
 
@@ -124,11 +121,11 @@ public class ElasticProbeRepository implements ProbeRepository {
     public Optional<ProbeResult> findLatest() {
         try {
             SearchResponse<ProbeResult> response = client.search(s -> s
-                    .index(INDEX)
+                    .index(this.index)
                     .size(1)
                     .sort(sort -> sort
                             .field(f -> f
-                                    .field("timesteamp")
+                                    .field("timestamp")
                                     .order(SortOrder.Desc)
                             ))
                     , ProbeResult.class);

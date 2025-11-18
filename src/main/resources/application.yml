@@ -6,6 +6,7 @@ ict:
   probe:
     interval-ms: 1000       # 1 second default
   elasticsearch:
-    host: localhost
+    host: elasticsearch
     port: 9200
+    scheme: http
     index: probe-results

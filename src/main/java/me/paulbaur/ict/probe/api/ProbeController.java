@@ -12,6 +12,10 @@ import java.util.List;
  */
 @RestController
 @RequestMapping("/api/probe")
+@Tag(
+        name = "Probe Results",
+        description = "Operations for retrieving current and historical connectivity probe results."
+)
 public class ProbeController {
 
     private final ProbeService probeService;

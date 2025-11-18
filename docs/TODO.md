@@ -258,6 +258,48 @@ Explain timing, drift avoidance, and round-robin logic.
 
 ---
 
+# ✅ **OpenAPI Compliance Checklist (Engineer)**
+
+### Global
+
+* [ ] Add springdoc-openapi dependency
+* [ ] Add OpenApiConfig
+* [ ] Verify `/swagger-ui.html` functions
+
+### Controllers
+
+* [ ] Add `@Tag` to all Controllers
+* [ ] Add `@Operation` to all endpoints
+* [ ] Add `@ApiResponses`
+* [ ] Add request/response examples
+* [ ] Add media type declarations
+* [ ] Add query/path param metadata
+
+### DTOs
+
+* [ ] Add `@Schema` annotations
+* [ ] Ensure enums have `@Schema(description=...)`
+* [ ] Document timestamp formats
+
+### Errors
+
+* [ ] Create ErrorResponse record
+* [ ] Document errors in all endpoints
+
+### Integration Tests
+
+* [ ] Add `/v3/api-docs` contract test
+* [ ] Verify all paths appear
+* [ ] Verify all tags appear
+
+### Documentation
+
+* [ ] Update `/docs/API_SPEC.md`
+* [ ] Add OpenAPI endpoint links
+* [ ] Document Swagger UI
+
+---
+
 # **Need Anything Expanded or Implemented?**
 
 If you want, I can now:

@@ -28,6 +28,24 @@ A Java 21 + Spring Boot application that monitors internet connectivity using OS
 
 ---
 
+## **Project Documentation**
+
+Documentation lives in the `/docs` directory:
+
+* `MASTER_ROLE_SELECTOR.md`
+* `ARCHITECTURE.md`
+* `ROADMAP.md`
+* `API_SPEC.md`
+* `TEST_PLAN.md`
+
+---
+
+## Security
+
+This is a dev/homelab project. Do not expose this docker-compose stack directly to the internet. It runs Elasticsearch and Kibana without authentication and the app has no auth (MVP assumption).
+
+---
+
 # **Why This Project Uses Elasticsearch Java API Client 8.12.x**
 
 This project originally attempted to use the **Elasticsearch Java API Client v9.x**.
@@ -82,18 +100,6 @@ which compiles cleanly, reads naturally, and works reliably.
 
 If/when the 9.x client’s DSL stabilizes, the project can migrate forward.
 For now, **8.12.x provides the correct balance of stability, clarity, and developer ergonomics**.
-
----
-
-## **Project Documentation**
-
-Documentation lives in the `/docs` directory:
-
-* `MASTER_ROLE_SELECTOR.md`
-* `ARCHITECTURE.md`
-* `ROADMAP.md`
-* `API_SPEC.md`
-* `TEST_PLAN.md`
 
 ---
 
