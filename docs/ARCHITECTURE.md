@@ -540,4 +540,13 @@ The core runtime architecture remains a pure Java 21 + Spring Boot + Elasticsear
 
 ---
 
+## API Documentation
+
+The application uses `springdoc-openapi` to automatically generate an OpenAPI 3 contract at runtime. The generated contract and interactive Swagger UI are available when the application is running at:
+
+- OpenAPI JSON: `/v3/api-docs`
+- Swagger UI: `/swagger-ui.html`
+
+These endpoints are treated as the source of truth for the HTTP contract and can be used in CI to validate the API surface.
+
 See API_SPEC.md for endpoint definitions.

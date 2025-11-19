@@ -96,3 +96,25 @@ Optional Prometheus metrics endpoint (Phase 2+).
 Exposed only when metrics are enabled.
 
 ---
+
+## OpenAPI / Swagger
+
+The canonical API contract is generated at runtime by springdoc-openapi. Use the following endpoints as the source of truth:
+
+- OpenAPI JSON: `/v3/api-docs`
+- Swagger UI: `/swagger-ui.html`
+
+The main API groups (tags) and representative endpoints include:
+
+- Status
+  - GET `/api/status` (or `/api/probe-results/latest`) — latest probe result
+- History
+  - GET `/api/history` (deprecated) or GET `/api/probe-results` — historical probe results with filters
+- Targets
+  - GET `/api/targets` — list targets
+  - POST `/api/targets` — create target
+  - DELETE `/api/targets/{id}` — delete target
+- System
+  - GET `/api/system/status` — internal system health and details
+- Metrics (optional)
+  - GET `/api/metrics` — Prometheus metrics (text/plain) when enabled
