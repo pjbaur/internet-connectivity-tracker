@@ -1,6 +1,5 @@
-# **ARCHITECTURE.md (Updated)**
+# **ARCHITECTURE.md**
 
-````markdown
 # Architecture Overview
 
 This document describes the system architecture for the **Internet Connectivity Tracker**, including:
@@ -55,7 +54,7 @@ flowchart TD
 
     ES_REPO --> ES
     Kibana --> ES
-````
+```
 
 ---
 
@@ -185,14 +184,6 @@ flowchart LR
 ---
 
 ## 6. Testing Strategy
-
-Architect:
-
-Here is the **detailed testing strategy section** you requested — add this directly into **ARCHITECTURE.md** under a new `## Testing Strategy` header.
-
----
-
-# **Testing Strategy**
 
 A comprehensive testing approach ensures reliability across fast-loop probing, Elasticsearch persistence, and Dockerized deployment. The Internet Connectivity Tracker uses three layers of tests:
 
@@ -392,7 +383,160 @@ This architecture is designed for:
 * **Observability** (Kibana dashboards)
 * **Cross-platform probing** (TCP now, ICMP later)
 
+---
+
+# **8. AI-Assisted Development Architecture**
+
+The **Internet Connectivity Tracker** uses AI tooling (ChatGPT Agent Mode) as part of its engineering workflow.
+AI is *not* part of the runtime system; instead, it acts as a **development accelerator** that interacts with the repository and documentation during the build and maintenance lifecycle.
+
+AI-assisted development enables:
+
+* Automated code generation and refactoring
+* Multi-file updates across controllers, services, repositories, and tests
+* Consistent application of project conventions (Java 21, Spring Boot, Vertical Slices)
+* Automated updates to project documentation
+* DevOps pipeline and Docker configuration maintenance
+* Test suite expansion using JUnit 5, AssertJ, and Testcontainers
+* Architecture and API evolution through role-based prompts
+
+This section formalizes how AI fits into the development architecture.
+
+---
+
+## **8.1 AI in the Development Lifecycle**
+
+AI tools operate as part of a **sidecar development system**:
+
+```mermaid
+flowchart LR
+    Dev[Human Developer] -->|Prompts, Role Commands| Agent[ChatGPT Agent Mode]
+
+    Agent -->|Code Edits| Repo[GitHub Repository]
+    Agent -->|Doc Updates| Docs[Project Documentation]
+
+    Repo --> CI[GitHub Actions CI Pipeline]
+    CI --> DockerBuild[Docker Build + TestContainers Integration Tests]
+    DockerBuild --> RuntimeStack[Spring Boot + Elasticsearch + Kibana]
+
+    Dev --> Repo
 ```
+
+AI influences **code and documentation**, but plays **no role in runtime execution** of the application.
+
+---
+
+## **8.2 Role-Based AI Workflow**
+
+The project uses a **Master Role Selector** that maps prompts into specific responsibilities:
+
+* **Architect:** System design, slice boundaries, patterns, data-flow, ES index mapping strategy
+* **Engineer:** Implements features, refactors code, builds slices, generates tests
+* **QA:** Creates/updates unit tests, integration tests, system-test plans
+* **DevOps:** Maintains Dockerfiles, docker-compose, GitHub Actions pipelines
+* **Writer:** Updates documentation, README, diagrams, onboarding guides
+
+AI uses these roles to maintain architectural consistency and ensure deterministic outputs.
+
+---
+
+## **8.3 AI-Assisted Feature Development**
+
+AI accelerates development of new feature slices by generating:
+
+* Controller/service/repository scaffolding
+* Domain models and DTOs
+* Elasticsearch queries using the ES 9.x Java API Client
+* Strategy implementations (TCP, ICMP, Hybrid)
+* Unit tests (JUnit 5 + AssertJ + Mockito)
+* Integration tests (Spring Boot Test + Testcontainers)
+* Updates to `/docs/API_SPEC.md` and `/docs/ARCHITECTURE.md`
+* Updates to OpenAPI annotations in controllers
+
+This creates a consistent, maintainable vertical-slice code structure.
+
+---
+
+## **8.4 AI-Assisted DevOps and Tooling**
+
+AI maintains and evolves the project’s infrastructure:
+
+### **Docker & Compose**
+
+* Multi-stage Docker builds
+* Optimized final images
+* ES/Kibana stack configuration updates
+* Version bumps aligned with ES 9.x compatibility
+
+### **GitHub Actions**
+
+* TestContainers-ready CI setup
+* Maven caching
+* Nightly system tests triggered through Docker Compose
+* Automated linting and static analysis additions
+
+### **Kibana & Elasticsearch Automation**
+
+* Auto-generation of index templates
+* Kibana dashboard JSON exports
+* Data model consistency checks
+
+---
+
+## **8.5 AI-Assisted Documentation Management**
+
+AI helps maintain:
+
+* `/docs/ARCHITECTURE.md`
+* `/docs/API_SPEC.md`
+* `/docs/TEST_PLAN.md`
+* `/docs/ROADMAP.md`
+* `/docs/MASTER_ROLE_SELECTOR.md`
+* `README.md` and onboarding guides
+
+This ensures documentation evolves in lockstep with the application code.
+
+---
+
+## **8.6 Principles of AI Usage**
+
+The project follows seven principles:
+
+1. **AI accelerates development but does not replace engineering judgment.**
+2. **The human developer is always the final decision maker.**
+3. **All AI-generated code must be readable, testable, and idiomatic.**
+4. **No AI-generated change is accepted without review and test coverage.**
+5. **AI must follow established architectural patterns (Vertical Slice Architecture).**
+6. **AI must not introduce deprecated or unstable APIs.**
+7. **Documentation must always reflect the current state of the system.**
+
+These principles ensure reliability and maintainability of the codebase.
+
+---
+
+## **8.7 Non-Goals for AI**
+
+* AI is **not** used at runtime.
+* AI does **not** perform live diagnostics inside the application.
+* AI does **not** modify application behavior autonomously.
+* AI does **not** replace system tests, load tests, or human review.
+
+This keeps runtime concerns clean, deterministic, and production-safe.
+
+---
+
+## **8.8 Summary**
+
+AI is integrated into the **development workflow**, not the runtime system.
+The AI-assisted architecture:
+
+* Improves engineering velocity
+* Enforces architectural consistency
+* Enhances documentation quality
+* Ensures robust testing
+* Supports long-term maintainability
+
+The core runtime architecture remains a pure Java 21 + Spring Boot + Elasticsearch system following Vertical Slice Architecture principles.
 
 ---
 

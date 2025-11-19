@@ -12,10 +12,14 @@ import java.util.List;
  */
 @RestController
 @RequestMapping("/api/probe")
+/*
+TODO: Finish implementing OpenAPI + Swagger
+
 @Tag(
         name = "Probe Results",
         description = "Operations for retrieving current and historical connectivity probe results."
 )
+*/
 public class ProbeController {
 
     private final ProbeService probeService;
