@@ -2,6 +2,8 @@ package me.paulbaur.ict.probe.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import me.paulbaur.ict.common.model.ProbeMethod;
+import me.paulbaur.ict.common.model.ProbeStatus;
 import me.paulbaur.ict.probe.domain.ProbeRequest;
 import me.paulbaur.ict.probe.domain.ProbeResult;
 import me.paulbaur.ict.probe.service.strategy.ProbeStrategy;
@@ -9,6 +11,7 @@ import me.paulbaur.ict.target.domain.Target;
 import me.paulbaur.ict.target.service.TargetRepository;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
@@ -23,47 +26,59 @@ public class ProbeServiceImpl implements ProbeService {
     private final ProbeRepository probeRepository;
     private final TargetRepository targetRepository;
 
-
-    /**
-     * Probes a single target, saves the result, and returns it.
-     *
-     * @param target The target to probe.
-     * @return The result of the probe.
-     */
-    private ProbeResult probeTarget(Target target) {
+    public ProbeResult probe(Target target) {
+        log.debug("Initiating probe for target ID '{}' at {}:{}", target.getId(), target.getHost(), target.getPort());
         ProbeRequest request = new ProbeRequest(
                 target.getId().toString(),
                 target.getHost(),
                 target.getPort()
         );
 
-        ProbeResult result = probeStrategy.probe(request);
-        probeRepository.save(result);
-        return result;
+        try {
+            ProbeResult result = probeStrategy.probe(request);
+            probeRepository.save(result);
+
+            log.info("Probe completed for target '{}': status={}, latency={}ms, method={}",
+                    target.getId(), result.status(), result.latencyMs(), result.method());
+
+            return result;
+        } catch (Exception ex) {
+            // Catch unexpected exceptions from the strategy or repository
+            log.error("Unexpected error during probe for target '{}' ({}:{}): {}",
+                    target.getId(), target.getHost(), target.getPort(), ex.getMessage(), ex);
+
+            // Create a failure result to ensure the system remains stable
+            ProbeResult failureResult = new ProbeResult(
+                    Instant.now(),
+                    target.getId().toString(),
+                    target.getHost(),
+                    null,
+                    ProbeStatus.DOWN,
+                    ProbeMethod.TCP, // Assuming TCP, as it's the only strategy for now
+                    "unexpected error: " + ex.getMessage()
+            );
+            probeRepository.save(failureResult);
+            return failureResult;
+        }
     }
 
-    /**
-     * Runs a probe on the next available target in a round-robin fashion.
-     * This method is intended to be called by a scheduler. It ensures that no
-     * exceptions escape, which could otherwise stop the scheduled execution.
-     * If no targets are configured, a warning is logged and the method returns.
-     */
     @Override
     public void runScheduledProbes() {
         try {
             Target target = targetSelector.nextTarget();
 
             if (target != null) {
-                probeTarget(target);
+                probe(target); // Delegate to the new central probe method
             } else {
                 log.warn("No targets configured - skipping probe tick");
             }
         } catch (Exception ex) {
-            // Critical: never let this escape to @Scheduled
-            log.error("Unexpected error in scheduled probe execution", ex);
+            // Critical: ensure the scheduler thread never dies
+            log.error("Unexpected error in scheduled probe execution loop", ex);
         }
     }
 
+    @Override
     public List<ProbeResult> getRecentResults(String targetId, int limit) {
         try {
             return probeRepository.findRecent(targetId, limit);
@@ -73,14 +88,14 @@ public class ProbeServiceImpl implements ProbeService {
         }
     }
 
+    @Override
     public void probe(String targetId) {
-        // Fetch target from repo
         UUID targetUUID = UUID.fromString(targetId);
-        Target target = targetRepository.findById(targetUUID).orElseThrow();
-
-        // get result from strategy, persist to ES, etc.
-        probeTarget(target);
-
+        targetRepository.findById(targetUUID)
+                .ifPresentOrElse(
+                        this::probe,
+                        () -> log.error("Cannot probe target: no target found with ID '{}'", targetId)
+                );
     }
 
     @Override

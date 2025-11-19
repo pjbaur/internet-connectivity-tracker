@@ -17,21 +17,21 @@ This section tracks only the work required to ship the **MVP (v0.1.0)** as defin
 
 ## ✅ A. Probe Execution (TcpProbeStrategy + ProbeServiceImpl)
 
-### ◻ A1. Implement core TCP probing in `TcpProbeStrategy`
+### ✅ A1. Implement core TCP probing in `TcpProbeStrategy`
 - Implement `probe(ProbeRequest request)` to:
-    - [ ] Open a TCP socket to the target host/port.
-    - [ ] Enforce a configurable connect timeout.
-    - [ ] Measure latency (e.g., `System.nanoTime()` before/after connect).
-    - [ ] Return `ProbeResult` with:
+    - [x] Open a TCP socket to the target host/port.
+    - [x] Enforce a configurable connect timeout.
+    - [x] Measure latency (e.g., `System.nanoTime()` before/after connect).
+    - [x] Return `ProbeResult` with:
         - `status = UP` when connect succeeds.
         - `status = DOWN` when connect fails or times out.
         - `latencyMs` populated only for successful probes.
         - `errorMessage` populated for failures (timeout, refused, DNS, etc.).
 - Add unit tests:
-    - [ ] Success case (mock socket/connect).
-    - [ ] Timeout scenario.
-    - [ ] Connection refused scenario.
-    - [ ] Unknown host / DNS failure.
+    - [x] Success case (mock socket/connect).
+    - [x] Timeout scenario.
+    - [x] Connection refused scenario.
+    - [x] Unknown host / DNS failure.
 - Ensure all I/O exceptions are caught and mapped to `ProbeResult` rather than leaking upwards.
 
 ### ◻ A2. Implement full probing workflow in `ProbeServiceImpl.probe(...)`
@@ -509,7 +509,7 @@ Explain timing, drift avoidance, and round-robin logic.
 ### Documentation
 
 * [ ] Update `/docs/API_SPEC.md`
-* [ ] Add OpenAPI endpoint links
+* [- ] Add OpenAPI endpoint links
 * [ ] Document Swagger UI
 
 ---

@@ -1,5 +1,7 @@
 package me.paulbaur.ict.probe.service;
 
+import me.paulbaur.ict.common.model.ProbeMethod;
+import me.paulbaur.ict.common.model.ProbeStatus;
 import me.paulbaur.ict.probe.domain.ProbeRequest;
 import me.paulbaur.ict.probe.domain.ProbeResult;
 import me.paulbaur.ict.probe.service.strategy.ProbeStrategy;
@@ -9,63 +11,201 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
-import static org.mockito.Mockito.*;
+import static org.assertj.core.api.Assertions.assertThat;
 
-public class ProbeServiceImplTest {
+class ProbeServiceImplTest {
 
-    private RoundRobinTargetSelector selector;
-    private ProbeStrategy strategy;
-    private ProbeRepository probeRepository;
-    private ProbeServiceImpl service;
-    private TargetRepository targetRepository;
+    private ProbeServiceImpl probeService;
+
+    // Test doubles (spies and stubs)
+    private ProbeStrategySpy probeStrategySpy;
+    private ProbeRepositoryStub probeRepositoryStub;
+    private TargetRepositoryStub targetRepositoryStub;
+    private RoundRobinTargetSelectorStub targetSelectorStub;
+
+    private static final UUID TEST_TARGET_ID = UUID.randomUUID();
+    private static final Target TEST_TARGET = new Target(TEST_TARGET_ID, "Test Target", "example.com", 80);
 
     @BeforeEach
     void setUp() {
-        selector = mock(RoundRobinTargetSelector.class);
-        strategy = mock(ProbeStrategy.class);
-        probeRepository = mock(ProbeRepository.class);
-        service = new ProbeServiceImpl(selector, strategy, probeRepository, targetRepository);
-    }
+        probeStrategySpy = new ProbeStrategySpy();
+        probeRepositoryStub = new ProbeRepositoryStub();
+        targetRepositoryStub = new TargetRepositoryStub();
+        targetSelectorStub = new RoundRobinTargetSelectorStub();
 
-    @Test
-    void runScheduledProbesInvokesStrategyAndSavesResult() {
-        // Given a configured target and a successful probe result
-        Target target = new Target(UUID.randomUUID(), "A", "localhost", 80);
-        ProbeResult result = new ProbeResult(
-                Instant.now(),
-                target.getId().toString(),
-                target.getHost(),
-                10L,
-                null,
-                null,
-                null
+        probeService = new ProbeServiceImpl(
+                targetSelectorStub,
+                probeStrategySpy,
+                probeRepositoryStub,
+                targetRepositoryStub
         );
-
-        when(selector.nextTarget()).thenReturn(target);
-        when(strategy.probe(any(ProbeRequest.class))).thenReturn(result);
-
-        // When
-        service.runScheduledProbes();
-
-        // Then
-        verify(selector).nextTarget();
-        verify(strategy).probe(any(ProbeRequest.class));
-        verify(probeRepository).save(result);
     }
 
     @Test
-    void runScheduledProbesDoesNothingWhenNoTargets() {
-        // Given no targets configured
-        when(selector.nextTarget()).thenReturn(null);
+    void probe_whenStrategySucceeds_callsStrategyAndSavesResult() {
+        // Arrange
+        ProbeResult successResult = new ProbeResult(Instant.now(), TEST_TARGET_ID.toString(), "example.com", 100L, ProbeStatus.UP, ProbeMethod.TCP, null);
+        probeStrategySpy.setNextResult(successResult);
 
-        // When
-        service.runScheduledProbes();
+        // Act
+        ProbeResult result = probeService.probe(TEST_TARGET);
 
-        // Then - srategy and repository must not be invoked
-        verify(selector).nextTarget();
-        verifyNoInteractions(strategy);
-        verifyNoInteractions(probeRepository);
+        // Assert
+        assertThat(result).isEqualTo(successResult);
+
+        // Verify probeStrategy was called correctly
+        assertThat(probeStrategySpy.getLastRequest()).isNotNull();
+        assertThat(probeStrategySpy.getLastRequest().targetId()).isEqualTo(TEST_TARGET_ID.toString());
+        assertThat(probeStrategySpy.getLastRequest().host()).isEqualTo("example.com");
+
+        // Verify repository save was called
+        assertThat(probeRepositoryStub.getSavedResults()).hasSize(1);
+        assertThat(probeRepositoryStub.getSavedResults().get(0)).isEqualTo(successResult);
+    }
+
+    @Test
+    void probe_whenStrategyThrowsException_createsAndSavesFailureResult() {
+        // Arrange
+        RuntimeException testException = new RuntimeException("Unexpected error!");
+        probeStrategySpy.setNextException(testException);
+
+        // Act
+        ProbeResult result = probeService.probe(TEST_TARGET);
+
+        // Assert
+        assertThat(result.status()).isEqualTo(ProbeStatus.DOWN);
+        assertThat(result.errorMessage()).isEqualTo("unexpected error: " + testException.getMessage());
+        assertThat(result.latencyMs()).isNull();
+        assertThat(result.targetId()).isEqualTo(TEST_TARGET_ID.toString());
+
+        // Verify repository save was called with the failure result
+        assertThat(probeRepositoryStub.getSavedResults()).hasSize(1);
+        assertThat(probeRepositoryStub.getSavedResults().get(0)).isEqualTo(result);
+    }
+
+    @Test
+    void runScheduledProbes_whenTargetAvailable_probesTarget() {
+        // Arrange
+        targetSelectorStub.setNextTarget(TEST_TARGET);
+        ProbeResult successResult = new ProbeResult(Instant.now(), TEST_TARGET_ID.toString(), "example.com", 100L, ProbeStatus.UP, ProbeMethod.TCP, null);
+        probeStrategySpy.setNextResult(successResult);
+
+        // Act
+        probeService.runScheduledProbes();
+
+        // Assert
+        assertThat(probeStrategySpy.getCallCount()).isEqualTo(1);
+        assertThat(probeRepositoryStub.getSavedResults()).hasSize(1);
+    }
+
+    @Test
+    void runScheduledProbes_whenNoTargetAvailable_doesNothing() {
+        // Arrange
+        targetSelectorStub.setNextTarget(null);
+
+        // Act
+        probeService.runScheduledProbes();
+
+        // Assert
+        assertThat(probeStrategySpy.getCallCount()).isZero();
+        assertThat(probeRepositoryStub.getSavedResults()).isEmpty();
+    }
+
+    // --- Test Doubles ---
+
+    static class ProbeStrategySpy implements ProbeStrategy {
+        private ProbeRequest lastRequest;
+        private ProbeResult nextResult;
+        private RuntimeException nextException;
+        private int callCount = 0;
+
+        @Override
+        public ProbeResult probe(ProbeRequest request) {
+            this.lastRequest = request;
+            this.callCount++;
+            if (nextException != null) {
+                throw nextException;
+            }
+            return nextResult;
+        }
+
+        public ProbeRequest getLastRequest() { return lastRequest; }
+        public int getCallCount() { return callCount; }
+        public void setNextResult(ProbeResult nextResult) { this.nextResult = nextResult; }
+        public void setNextException(RuntimeException nextException) { this.nextException = nextException; }
+    }
+
+    static class ProbeRepositoryStub implements ProbeRepository {
+        private final List<ProbeResult> savedResults = new ArrayList<>();
+
+        @Override
+        public void save(ProbeResult result) {
+            savedResults.add(result);
+        }
+
+        @Override
+        public Optional<ProbeResult> findLatest() {
+            return Optional.empty();
+        }
+
+        @Override
+        public List<ProbeResult> findRecent(String targetId, int limit) {
+            return new ArrayList<>();
+        }
+
+        @Override
+        public List<ProbeResult> findBetween(String targetId, Instant start, Instant end) {
+            return List.of();
+        }
+
+        public List<ProbeResult> getSavedResults() {
+            return savedResults;
+        }
+    }
+
+    static class TargetRepositoryStub implements TargetRepository {
+        private final List<Target> targets = new ArrayList<>();
+
+        @Override
+        public List<Target> findAll() {
+            return List.of();
+        }
+
+        @Override
+        public Optional<Target> findById(UUID id) {
+            return targets.stream().filter(t -> t.getId().equals(id)).findFirst();
+        }
+
+        @Override
+        public Target save(Target target) {
+            return null;
+        }
+
+        @Override
+        public void delete(UUID id) {
+
+        }
+    }
+
+    static class RoundRobinTargetSelectorStub extends RoundRobinTargetSelector {
+        private Target nextTarget;
+
+        public RoundRobinTargetSelectorStub() {
+            super(null); // Pass null as we override the behavior
+        }
+
+        @Override
+        public Target nextTarget() {
+            return nextTarget;
+        }
+
+        public void setNextTarget(Target nextTarget) {
+            this.nextTarget = nextTarget;
+        }
     }
 }
