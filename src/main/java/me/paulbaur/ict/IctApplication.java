@@ -6,8 +6,8 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication
 @EnableScheduling
-public class InternetConnectivityTrackerApplication {
+public class IctApplication {
     public static void main(String[] args) {
-        SpringApplication.run(InternetConnectivityTrackerApplication.class, args);
+        SpringApplication.run(IctApplication.class, args);
     }
 }

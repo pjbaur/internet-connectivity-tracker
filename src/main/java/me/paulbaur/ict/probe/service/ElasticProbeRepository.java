@@ -18,6 +18,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
+@Repository
 public class ElasticProbeRepository implements ProbeRepository {
 
     private static final Logger log = LoggerFactory.getLogger(ElasticProbeRepository.class);
