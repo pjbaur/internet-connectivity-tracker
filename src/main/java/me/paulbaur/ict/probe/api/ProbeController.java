@@ -2,6 +2,7 @@ package me.paulbaur.ict.probe.api;
 
 import me.paulbaur.ict.probe.domain.ProbeResult;
 import me.paulbaur.ict.probe.service.ProbeService;
+import me.paulbaur.ict.common.model.ErrorResponse;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.MediaType;
 
@@ -48,8 +49,12 @@ public class ProbeController {
                             examples = {@ExampleObject(name = "recent", value = "[{\"targetId\":\"target-1\",\"success\":true,\"rttMs\":23,\"timestamp\":\"2025-11-19T12:34:56Z\"}]")}
                     )
             ),
-            @ApiResponse(responseCode = "400", description = "Bad request - invalid parameters"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
+            @ApiResponse(responseCode = "400", description = "Bad request - invalid parameters. TODO: Align controller to return structured ErrorResponse",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(responseCode = "500", description = "Internal server error. TODO: Align controller to return structured ErrorResponse",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))
+            )
     })
     @GetMapping("/targets/{targetId}/recent")
     public List<ProbeResult> recent(

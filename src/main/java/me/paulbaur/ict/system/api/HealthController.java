@@ -6,6 +6,8 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.Map;
 import org.springframework.http.MediaType;
 
+import me.paulbaur.ict.common.model.ErrorResponse;
+
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -25,7 +27,9 @@ public class HealthController {
             @ApiResponse(responseCode = "200", description = "Service is healthy",
                     content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(type = "object"), examples = {@ExampleObject(value = "{\"status\":\"OK\",\"service\":\"internet-connectivity-tracker\"}")})
             ),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
+            @ApiResponse(responseCode = "500", description = "Internal server error. TODO: Align controller to return structured ErrorResponse",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))
+            )
     })
     public Map<String, Object> health() {
         return Map.of(
