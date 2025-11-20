@@ -1,515 +1,279 @@
+# **TODO.md — Internet Connectivity Tracker**
+
+**Goal:** Deliver a production-quality **v0.1.0 (MVP)** release of the Internet Connectivity Tracker, followed by structured Phase 2 and Phase 3 improvements.
 
 ---
 
-# 🚩 MVP Completion Checklist (Blocking for v0.1.0)
+# **📌 Milestone v0.1.0 — MVP (TCP-only, Elasticsearch, API, Docker, CI)**
 
-This section tracks only the work required to ship the **MVP (v0.1.0)** as defined in the PRD, ROADMAP, and ARCHITECTURE:
+*(Ordered in exact implementation sequence)*
 
-- TCP-only probing
-- Round-robin multi-target scheduling
-- Elasticsearch persistence
-- `/api/status` + `/api/history` + basic target management
-- Docker + docker-compose stack
-- Basic CI and Kibana dashboards
-- Minimal but meaningful tests
+## **1. Finalize Elasticsearch Query Layer**
 
----
+### 🔧 Repository Implementation
 
-## ✅ A. Probe Execution (TcpProbeStrategy + ProbeServiceImpl)
+* [ ] Implement `ElasticProbeRepository.findRecent(targetId, limit)`
+* [ ] Implement `ElasticProbeRepository.findBetween(targetId, start, end)`
+* [ ] Add proper Elasticsearch 8.x/9.x query DSL:
 
-### ✅ A1. Implement core TCP probing in `TcpProbeStrategy`
-- Implement `probe(ProbeRequest request)` to:
-    - [x] Open a TCP socket to the target host/port.
-    - [x] Enforce a configurable connect timeout.
-    - [x] Measure latency (e.g., `System.nanoTime()` before/after connect).
-    - [x] Return `ProbeResult` with:
-        - `status = UP` when connect succeeds.
-        - `status = DOWN` when connect fails or times out.
-        - `latencyMs` populated only for successful probes.
-        - `errorMessage` populated for failures (timeout, refused, DNS, etc.).
-- Add unit tests:
-    - [x] Success case (mock socket/connect).
-    - [x] Timeout scenario.
-    - [x] Connection refused scenario.
-    - [x] Unknown host / DNS failure.
-- Ensure all I/O exceptions are caught and mapped to `ProbeResult` rather than leaking upwards.
+    * [ ] `DateRangeQuery`
+    * [ ] `Sort` by timestamp desc
+    * [ ] `Size(limit)`
+    * [ ] `match` target id keyword field
+* [ ] Ensure index name resolution uses `ict.elasticsearch.index`.
 
-### ◻ A2. Implement full probing workflow in `ProbeServiceImpl.probe(...)`
-- Implement the main probing method to:
-    - [x] Build a `ProbeRequest` from the chosen `Target`.
-    - [x] Delegate to `ProbeStrategy` (currently `TcpProbeStrategy`).
-    - [x] Persist the resulting `ProbeResult` via `ProbeRepository.save(...)`.
-    - [x] Perform structured logging (`log.info/debug/error`) for:
-        - target, status, latency, errorMessage, method.
-- Error handling:
-    - [x] Wrap unexpected exceptions in a domain-appropriate error and map to a DOWN result (do not crash the scheduler).
-    - [x] Ensure logging includes enough context for debugging (target ID, host, port).
-- Add unit tests for `ProbeServiceImpl`:
-    - [x] Verify it calls `ProbeStrategy` with the expected request.
-    - [x] Verify it calls `ProbeRepository.save(...)` with the resulting `ProbeResult`.
-    - [x] Verify logging and behavior on success and failure paths.
+### 🧪 Integration Tests (Testcontainers)
 
-### ◻ A3. Implement `getLatestStatus()` in `ProbeServiceImpl`
-- [x] Use `ProbeRepository.findLatest()` (returning `Optional<ProbeResult>`).
-- [x] Decide on behavior when no results exist for MVP (e.g., return `null` and let controller map to 204/200).
-- [x] Add unit test for `getLatestStatus()`:
-    - [x] Case where the latest result is present.
-    - [x] Case where repository returns `Optional.empty()`.
+* [ ] Add tests for `findRecent()`:
+
+    * [ ] Multiple probe results per target
+    * [ ] Limit enforcement
+    * [ ] Correct ordering (newest-first)
+* [ ] Add tests for `findBetween()`:
+
+    * [ ] Time-range filtering
+    * [ ] Behavior when empty
+    * [ ] Behavior when target not found
 
 ---
 
-## ✅ B. Scheduling & Target Management
+## **2. Finish History Endpoints**
 
-### ◻ B1. Implement `TargetManager` (round-robin selection)
-- Provide an in-memory, thread-safe manager:
-    - [x] `List<Target> listTargets()`
-    - [x] `Target addTarget(...)`
-    - [x] `void removeTarget(String id)`
-    - [x] `Optional<Target> nextTargetRoundRobin()`
-- Behavior:
-    - [x] If there are no targets, `nextTargetRoundRobin()` returns empty.
-    - [x] Round-robin should cycle fairly through all targets.
-- Add unit tests:
-    - [x] Single target behavior.
-    - [x] Multiple target cycling.
-    - [x] Removing targets updates the cycle correctly.
+Located in `ProbeController`.
 
-### ◻ B2. Implement scheduled probing loop
-- Implement a Spring `@Scheduled` method in a scheduler component (or in `ProbeServiceImpl` wrapper) that:
-    - [x] Runs on a configurable fixed interval (`ict.probe.interval-ms`, default 1000ms).
-    - [x] Fetches `nextTargetRoundRobin()` from `TargetManager`.
-    - [x] If a target is present, calls `ProbeService.probe(target)`; otherwise logs a warning but does nothing.
-    - [x] Catches and logs any exception to avoid killing the scheduler thread.
-- Add configuration:
-    - [x] Property in `application.yml` / `application.properties` for probe interval.
-    - [x] Reasonable default for MVP (1000ms).
+* [ ] Wire `GET /api/history` → `findRecent()`
+* [ ] Add optional query params:
 
-### ✅ B3. Scheduler tests
-- [x] Add unit tests where the scheduling method is invoked directly (no real time delays) to verify:
-    - Behavior with 0, 1, and many targets.
-    - That it delegates to `ProbeService.probe(...)` exactly as expected.
+    * `targetId`
+    * `limit`
+    * `start` / `end` (RFC 3339 timestamps)
+* [ ] Validate query parameters & handle invalid ranges
+* [ ] Update Swagger/OpenAPI docs
+* [ ] Add DTO abstractions if needed (avoid leaking domain objects directly)
+
+### 🧪 Controller Tests
+
+* [ ] Add `ProbeControllerIT` (MockMvc):
+
+    * [ ] 200 OK with valid results
+    * [ ] 400 on invalid timestamps
+    * [ ] 404 when target ID does not exist
+    * [ ] JSON schema validation
 
 ---
 
-## ✅ C. Elasticsearch Repository Implementation (MVP)
+## **3. Resolve `/api/status` Endpoint Split**
 
-### ◻ C1. Implement `save(ProbeResult result)` in `ElasticProbeRepository`
-- [ ] Use Elasticsearch Java API client to index the document into the `probe-results` index.
-- [ ] Ensure field mapping matches your `ProbeResult` domain model.
-- [ ] Log failures with `log.error(...)` and throw or wrap as a domain exception (depending on your chosen strategy).
+The PRD requires:
 
-### ◻ C2. Implement `findRecent(String targetId, int limit)`
-- [ ] Build a bool query filtering by `targetId`.
-- [ ] Sort by `timestamp` descending.
-- [ ] Limit results (`size = limit`).
-- [ ] Map ES hits to `ProbeResult` instances.
-- [ ] Return as `List<ProbeResult>`.
+* **Status snapshot** (overall system view)
+* **Latest probe result** per target or global
 
-### ◻ C3. Implement `findBetween(String targetId, Instant start, Instant end)`
-- [ ] Build a bool query:
-    - [ ] Filter on `targetId` (keyword or equivalent).
-    - [ ] Range query on `timestamp` between `start` and `end`.
-- [ ] Sort by `timestamp` ascending.
-- [ ] Return ordered `List<ProbeResult>`.
+Your current `/api/status` mixes these concepts.
 
-### ◻ C4. Implement `findLatest()` using ES sort/size
-- [ ] Search with `size = 1`, sort `timestamp` descending.
-- [ ] Wrap the result in `Optional<ProbeResult>`.
-- [ ] Log and return `Optional.empty()` on query failures.
+### Decision:
 
-### ◻ C5. Elasticsearch integration tests (Testcontainers)
-- [ ] Add a Testcontainers-based integration test class for `ElasticProbeRepository`:
-    - [ ] Start ephemeral Elasticsearch container.
-    - [ ] Create `probe-results` index if needed.
-    - [ ] Insert sample `ProbeResult` via `save()`.
-    - [ ] Verify `findLatest()`, `findRecent()`, and `findBetween()` behavior.
+* [ ] Convert **`/api/status` → StatusSnapshot`** only
+* [ ] Add new endpoint:
+
+    * [ ] `/api/probe-results/latest` or `/api/latest-probe-result`
+    * [ ] Returns latest `ProbeResult`
+
+### Required updates:
+
+* [ ] Update `StatusController`
+* [ ] Update `ProbeService` naming & methods
+* [ ] Update `API_SPEC.md`
+* [ ] Update `OpenApiDocsIT`
+* [ ] Update system documentation (`ARCHITECTURE.md` / PRD references)
 
 ---
 
-## ✅ D. Target Management API (MVP)
+## **4. Global Error Handling**
 
-### ◻ D1. Implement target domain + persistence
-- [ ] Ensure `Target` domain model is finalized (fields: id/UUID, host, port, label, enabled, etc.).
-- [ ] Implement a simple persistence strategy for MVP:
-    - In-memory only, OR
-    - Elasticsearch index for targets (if desired).
-- [ ] Provide a `TargetService` to wrap `TargetManager` and persistence.
+Introduce a consistent, modern Spring error model.
 
-### ◻ D2. Implement `TargetController`
-- [ ] `GET /api/targets` → list current targets.
-- [ ] `POST /api/targets` → add a new target.
-- [ ] `DELETE /api/targets/{id}` → remove a target.
-- [ ] Basic validation (host non-empty, port in valid range, etc.).
-- [ ] Consider simple DTOs for request/response (to avoid leaking internal domain).
+### Add Global Controller Advice
 
-### ◻ D3. Tests for target management
-- [ ] Unit tests for `TargetService` and/or `TargetManager`.
-- [ ] Controller unit tests (using mocked service).
-- [ ] Integration test:
-    - [ ] Add a target via API.
-    - [ ] List targets and assert presence.
-    - [ ] Delete and verify removal.
+* [ ] Create `@RestControllerAdvice` with handlers for:
 
----
+    * [ ] `MethodArgumentNotValidException` → 400
+    * [ ] `ConstraintViolationException` → 400
+    * [ ] Custom `NotFoundException` → 404
+    * [ ] `IllegalArgumentException` → 400
+    * [ ] Generic `Exception` → 500
 
-## ✅ E. Docker & Docker Compose (MVP)
+### Integrate `ErrorResponse`
 
-### ◻ E1. Multi-stage Dockerfile for Spring Boot app
-- [ ] Stage 1: Build with Maven (Temurin JDK 21).
-- [ ] Stage 2: Minimal runtime image (Temurin JRE or distroless).
-- [ ] Copy only the built JAR and required files.
-- [ ] Expose app port and define entrypoint.
+* [ ] Ensure all controllers return the unified `ErrorResponse` JSON
+* [ ] Remove TODOs related to inconsistent error formats
 
-### ◻ E2. `docker-compose.yml` stack
-- [ ] Service: `app` (internet-connectivity-tracker).
-- [ ] Service: `elasticsearch` (ES 9.x).
-- [ ] Service: `kibana` (Kibana 9.x).
-- [ ] Configure:
-    - ES heap size, single-node mode for local.
-    - Environment variables for ES + Kibana.
-    - Health checks or `depends_on` for app startup order.
-- [ ] Document commands:
-    - `docker compose up --build`
-    - `docker compose down -v`
+### Tests
+
+* [ ] Add global error handling unit tests
+* [ ] Add controller-level tests verifying the new error shapes
 
 ---
 
-## ✅ F. GitHub Actions CI (MVP)
+## **5. Controller Integration Tests (Coverage Expansion)**
 
-### ◻ F1. CI workflow for build & tests
-- [ ] Add `.github/workflows/ci.yml` with:
-    - [ ] Checkout repo.
-    - [ ] Set up JDK 21.
-    - [ ] Cache Maven dependencies.
-    - [ ] Run `mvn -B verify` (unit + integration tests, Testcontainers).
-- [ ] Ensure Docker is available for Testcontainers (e.g., `services: docker` or appropriate runner configuration).
+* [ ] `TargetControllerIT`
 
-### ◻ F2. Optional: Docker image build in CI
-- [ ] Add a job step to build the Docker image:
-    - `docker build -t <image-name> .`
-- [ ] Optionally push to GHCR (later phase).
+    * [ ] Create target
+    * [ ] Delete target
+    * [ ] Bad UUID returns 400
+* [ ] `ProbeControllerIT`
 
----
+    * [ ] Manual probe execution works
+    * [ ] History endpoint returns filtered results
+* [ ] `StatusControllerIT`
 
-## ✅ G. Kibana Dashboards (MVP)
+    * [ ] New `/api/probe-results/latest` endpoint
+* [ ] `HealthControllerIT`
 
-### ◻ G1. Basic Kibana setup
-- [ ] Create index pattern for `probe-results`.
-- [ ] Create a simple dashboard with:
-    - [ ] Line chart: latency over time for a given target.
-    - [ ] Data table: last N probe results (timestamp, status, latency, target).
-    - [ ] (Optional) uptime visualization (% UP over selected time range).
-- [ ] Either:
-    - Export dashboard JSON and store in `/docs/kibana/`, OR
-    - Document manual setup steps in ARCHITECTURE or a new `KIBANA_SETUP.md`.
+    * [ ] Returns correct system info JSON
+
+This completes test coverage for the API layer.
 
 ---
 
-## ✅ H. Testing & QA for MVP
+## **6. Kibana Dashboard Set**
 
-### ◻ H1. Unit tests (missing pieces)
-- [ ] `ProbeServiceImplTest` (service behavior & repository interactions).
-- [ ] `TcpProbeStrategyTest` (TCP behavior, timeouts, error mapping).
-- [ ] `TargetManagerTest` (round-robin + add/remove).
-- [ ] Scheduler method unit tests (invoked directly, not time-based).
+### Create Basic Visualizations
 
-### ◻ H2. Integration tests (Spring Boot + ES)
-- [ ] `/api/status` integration test:
-    - [ ] Seed ES with a latest `ProbeResult`.
-    - [ ] Call `/api/status` and validate body.
-- [ ] `/api/history` integration test:
-    - [ ] Seed ES with multiple results.
-    - [ ] Call `/api/history` with and without date filters.
-    - [ ] Validate ordering and contents.
+Using local `docker-compose`:
 
----
+* [ ] Create index pattern for `probe-results`
+* [ ] Create visualizations:
 
-# **TODO.md — Engineering Backlog (Generated from Past Suggestions)**
+    * [ ] Latency over time (per target)
+    * [ ] Availability uptime chart
+    * [ ] Table of latest results
+* [ ] Combine into a single “Connectivity Overview” dashboard
 
-This document consolidates all recommended enhancements, next steps, and optional improvements suggested during development of the **Internet Connectivity Tracker**.
+### Export & Commit
+
+* [ ] Export as `.ndjson` into `docs/kibana/`
+* [ ] Add import instructions in README
 
 ---
 
-# ✅ **1. Architecture & Code Structure**
+## **7. Documentation Alignment (Must for MVP Polish)**
 
-### ◻ Convert `ProbeResult` into a Java 21 `record`
+* [ ] Update `ROADMAP.md` (remove ICMP from MVP)
+* [ ] Update `API_SPEC.md` (new endpoint names)
+* [ ] Update `PRD.md` if needed
+* [ ] Update `ARCHITECTURE.md` where endpoints or flows changed
+* [ ] Update `TEST_PLAN.md` to describe new test cases
+* [ ] Update `README.md` for:
 
-Cleaner, immutable, serialization-friendly.
-
-### ◻ Add DTOs for API boundaries
-
-Avoid exposing internal domain models directly.
-
-### ◻ Move ES index name into configuration
-
-Example:
-`ict.elasticsearch.probe-index=probe-results`
-
-
-And a `@ConfigurationProperties` class.
-
-### ◻ Generate a full, polished `ElasticProbeRepository`
-
-Including:
-
-* mappings
-* startup index creation (optional)
-* structured queries
-* consistent exception handling
-
-### ◻ Apply Lombok cleanup across entire project
-
-Ensure consistent use of `@Slf4j`, `@RequiredArgsConstructor`, etc.
+    * [ ] Running with Docker Compose
+    * [ ] Accessing Kibana
+    * [ ] API examples
+    * [ ] Notes that MVP is TCP-only
 
 ---
 
-# ✅ **2. Probe Service Enhancements**
+## **8. Release Prep**
 
-### ◻ Add more API methods
+* [ ] Bump version to `v0.1.0` in `pom.xml`
+* [ ] Tag release in Git
+* [ ] Create GitHub Release:
 
-* `getStatusForTarget(String targetId)`
-* `getUptimeSummary()`
-* `getLatencySummary()`
-* `getRecentFailures()`
+    * [ ] Attach Kibana dashboard export
+    * [ ] Add screenshots
+    * [ ] Add architecture diagram
 
-### ◻ Add `ProbeServiceImplTest`
-
-Unit tests verifying:
-
-* calls to repository
-* calls to strategy
-* correct ProbeResult construction
-* exception flows
+**At this point your MVP is complete.**
 
 ---
 
-# ✅ **3. API Improvements**
+# **📦 Milestone v0.2.x — Phase 2 (ICMP, Outage Detection, Summary Aggregation)**
 
-### ◻ Add pagination to `/api/history`
+## **ICMP & Hybrid Probe Strategies**
 
-`?page=` and `?size=`, or cursor-based.
+* [ ] Implement `IcmpProbeStrategy`
+* [ ] Implement `HybridProbeStrategy` fallback chain
+* [ ] Add configuration to choose probe type
 
-### ◻ Add filtering to `/api/history`
+## **Outage Detection**
 
-Filters:
+* [ ] Implement outage detection state machine
+* [ ] Persist `OutageEvent` to Elasticsearch
+* [ ] Add “active outage” endpoint
+* [ ] Extend Kibana dashboard to show outage timelines
 
-* targetId
-* status
-* method (TCP/ICMP)
+## **Aggregation**
 
-### ◻ Add `/api/targets/{id}/history`
+* [ ] Add scheduled jobs to compute:
 
-Target-specific endpoint.
+    * [ ] Hourly summary
+    * [ ] Daily summary
 
-### ◻ Add Prometheus `/actuator/prometheus` metrics endpoint
+## **Performance Improvements**
 
-Needs Micrometer + Prometheus registry.
-
----
-
-# ✅ **4. Elasticsearch & Storage Improvements**
-
-### ◻ Update `ElasticProbeRepository` to fully use `Optional`
-
-Consistent null-safety.
-
-### ◻ Add repository unit tests (Mockito)
-
-Verify:
-
-* ES request DSL correctness
-* error handling
-* empty results handling
-
-### ◻ Add repository integration tests (Testcontainers Elasticsearch)
-
-Spin up ephemeral ES → write/read → verify.
-
-### ◻ Add ILM (Index Lifecycle Management) in Phase 2
-
-Roll over index based on:
-
-* size
-* age
-
-### ◻ Add startup index creation with explicit mappings
-
-E.g. `timestamp` as `date_nanos`.
+* [ ] Use ILM + rollover indices
+* [ ] Add bulk ingestion mode
+* [ ] Improve scheduler throughput
 
 ---
 
-# ✅ **5. Scheduler & Probing Enhancements**
+# **🚀 Milestone v0.3.x — Phase 3 (Prometheus, Advanced Features)**
 
-### ◻ Add fake clock–based scheduler unit tests
+## **Prometheus & Metrics**
 
-Test scheduler behavior without delays.
+* [ ] Implement `/actuator/prometheus` or custom metrics endpoint
+* [ ] Add Micrometer timers for probe duration
+* [ ] Add gauges for active targets
 
-### ◻ Add multiple probe strategies
+## **Alerting**
 
-* ICMP
-* Hybrid (fallback TCP → ICMP)
-* Future: HTTP, DNS
+* [ ] Basic alert rules in code (email/webhook)
+* [ ] Optional integration with Alertmanager
+* [ ] Threshold-based latency alerting
 
-### ◻ Add circuit breaker for failing targets
+## **Advanced Query Features**
 
-Pause probing for X seconds after repeated failures.
-
-### ◻ Add round-robin target selector tests
-
-Test fairness and cycling behavior.
-
----
-
-# ✅ **6. Observability & Logging**
-
-### ◻ Add structured logging
-
-JSON or key-value logs for:
-
-* probe results
-* repository operations
-* error handling
-* scheduler execution
-
-### ◻ Add request logging middleware
-
-Trace HTTP calls.
-
-### ◻ Add correlation IDs (MDC)
-
-Optional but common in production systems.
-
-### ◻ Add application version endpoint
-
-(e.g., `/api/version`)
+* [ ] Paginated history
+* [ ] Dashboard widgets for top-N outages
+* [ ] Store metadata (RTT distribution, jitter, variance)
 
 ---
 
-# ✅ **7. Metrics & Monitoring**
+# **🌐 Milestone v0.4.x — Phase 4 (Optional UI, Cloud Deployment)**
 
-### ◻ Add Prometheus metrics (Phase 3)
+## **Custom Dashboard UI**
 
-Export:
+* [ ] React/Vite front-end for probe history
+* [ ] Latency charts via Recharts or ECharts
+* [ ] Target management UI
 
-* probe latency histogram
-* probe success/failure counters
-* uptime gauges
+## **Cloud Deployment Examples**
 
-### ◻ Add ES query performance metrics
-
-Track slow queries for debugging.
-
----
-
-# ✅ **8. Docker & DevOps Enhancements**
-
-### ◻ Generate complete multi-stage Dockerfile
-
-Minimal final image.
-
-### ◻ Create GitHub Actions CI workflow
-
-Steps:
-
-* `mvn verify`
-* TestContainers support
-* build Docker image
-* optionally push to GHCR
-
-### ◻ Add nightly system test workflow
-
-Docker Compose:
-
-* Spring Boot
-* Elasticsearch
-* Kibana
-
-Automatically run:
-
-* smoke tests
-* history queries
-* probe simulation
+* [ ] Terraform for AWS
+* [ ] Optional serverless ingestion endpoint
+* [ ] Managed Elasticsearch blueprint (OpenSearch, Elastic Cloud)
 
 ---
 
-# ✅ **9. Frontend & Visualization**
+# **✨ Milestone v1.0.0 — Production-Grade**
 
-### ◻ Add basic Kibana dashboards
-
-* latency over time
-* uptime gauge
-* last N probe results table
-
-### ◻ Add optional React UI (Phase 3)
-
-Small dashboard hitting `/api/status` + `/api/history`.
+* [ ] Robust distributed scheduler
+* [ ] Distributed target caching
+* [ ] Kafka (or lightweight queue) ingestion path
+* [ ] Multi-node deployment
+* [ ] Pluggable probe strategies (DNS, HTTP, TLS, etc.)
+* [ ] Enterprise authentication (Keycloak / OAuth2)
+* [ ] Full UI + role-based access control
 
 ---
 
-# ✅ **10. Documentation**
+# **🟢 Summary**
 
-### ◻ Add `DEVELOPER_GUIDE.md`
+This updated `TODO.md` gives you:
 
-Include:
-
-* IntelliJ setup
-* Lombok setup
-* Annotation processors
-* Running tests
-* ES + Kibana setup
-
-### ◻ Add `API.md` with detailed endpoint examples
-
-Curl + sample responses.
-
-### ◻ Add `ERROR_HANDLING.md`
-
-Describe exception flow, logging, and repository error wrapping.
-
-### ◻ Add `SCHEDULER_DESIGN.md`
-
-Explain timing, drift avoidance, and round-robin logic.
-
----
-
-# ✅ **OpenAPI Compliance Checklist (Engineer)**
-
-### Global
-
-* [ ] Add springdoc-openapi dependency
-* [ ] Add OpenApiConfig
-* [ ] Verify `/swagger-ui.html` functions
-
-### Controllers
-
-* [ ] Add `@Tag` to all Controllers
-* [ ] Add `@Operation` to all endpoints
-* [ ] Add `@ApiResponses`
-* [ ] Add request/response examples
-* [ ] Add media type declarations
-* [ ] Add query/path param metadata
-
-### DTOs
-
-* [ ] Add `@Schema` annotations
-* [ ] Ensure enums have `@Schema(description=...)`
-* [ ] Document timestamp formats
-
-### Errors
-
-* [ ] Create ErrorResponse record
-* [ ] Document errors in all endpoints
-
-### Integration Tests
-
-* [ ] Add `/v3/api-docs` contract test
-* [ ] Verify all paths appear
-* [ ] Verify all tags appear
-
-### Documentation
-
-* [ ] Update `/docs/API_SPEC.md`
-* [- ] Add OpenAPI endpoint links
-* [ ] Document Swagger UI
-
----
+* A **precise, ordered roadmap** to reach v0.1.0
+* Clearly broken down technical tasks
+* Integration of your **current architecture**
+* Clean boundaries between MVP and later expansions
+* Future-proofing through multi-phase releases
