@@ -3,6 +3,9 @@ package me.paulbaur.ict.common.config;
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.transport.ElasticsearchTransport;
 import co.elastic.clients.transport.rest_client.RestClientTransport;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.apache.http.HttpHost;
 import org.elasticsearch.client.RestClient;
 import org.springframework.beans.factory.annotation.Value;
@@ -28,7 +31,12 @@ public class ElasticsearchConfig {
 
     @Bean
     public ElasticsearchTransport elasticsearchTransport(RestClient restClient) {
-        return new RestClientTransport(restClient, new co.elastic.clients.json.jackson.JacksonJsonpMapper());
+        // Configure Jackson mapper to support java.time (Instant) serialization
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.registerModule(new JavaTimeModule());
+        mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+
+        return new RestClientTransport(restClient, new co.elastic.clients.json.jackson.JacksonJsonpMapper(mapper));
     }
 
     @Bean

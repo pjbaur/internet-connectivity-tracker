@@ -12,28 +12,28 @@
 
 ### 🔧 Repository Implementation
 
-* [ ] Implement `ElasticProbeRepository.findRecent(targetId, limit)`
-* [ ] Implement `ElasticProbeRepository.findBetween(targetId, start, end)`
-* [ ] Add proper Elasticsearch 8.x/9.x query DSL:
+* [x] Implement `ElasticProbeRepository.findRecent(targetId, limit)`
+* [x] Implement `ElasticProbeRepository.findBetween(targetId, start, end)`
+* [x] Add proper Elasticsearch 8.x/9.x query DSL:
 
     * [ ] `DateRangeQuery`
-    * [ ] `Sort` by timestamp desc
+    * [x] `Sort` by timestamp desc
     * [ ] `Size(limit)`
-    * [ ] `match` target id keyword field
-* [ ] Ensure index name resolution uses `ict.elasticsearch.index`.
+    * [x] `match` target id keyword field
+* [x] Ensure index name resolution uses `ict.elasticsearch.index`.
 
 ### 🧪 Integration Tests (Testcontainers)
 
-* [ ] Add tests for `findRecent()`:
+* [x] Add tests for `findRecent()`:
 
-    * [ ] Multiple probe results per target
-    * [ ] Limit enforcement
-    * [ ] Correct ordering (newest-first)
-* [ ] Add tests for `findBetween()`:
+    * [x] Multiple probe results per target
+    * [x] Limit enforcement
+    * [x] Correct ordering (newest-first)
+* [x] Add tests for `findBetween()`:
 
-    * [ ] Time-range filtering
-    * [ ] Behavior when empty
-    * [ ] Behavior when target not found
+    * [x] Time-range filtering
+    * [x] Behavior when empty
+    * [x] Behavior when target not found
 
 ---
 

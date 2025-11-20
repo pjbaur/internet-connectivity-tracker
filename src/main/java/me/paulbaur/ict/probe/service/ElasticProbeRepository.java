@@ -43,20 +43,34 @@ public class ElasticProbeRepository implements ProbeRepository {
 
             client.index(req);
         } catch (Exception ex) {
-            log.error("Failed to index probe result for target {}", result.targetId(), ex);
-            // Continue running. If we rethrow, the ProbeScheduler stops permanently.
+            log.error("Failed to index probe result for target {} host {} timestamp {}", result.targetId(), result.targetHost(), result.timestamp(), ex);
+            // Wrap lower-level exception in repository-specific unchecked exception
+            throw new ProbeRepositoryException("Failed to index probe result for target " + result.targetId(), ex);
         }
     }
 
+    /**
+     * Find the most recent probe results for a specific target.
+     *
+     * <p>This method executes a match query against the targetId.keyword field to
+     * ensure exact matching of the provided targetId. Results are sorted by the
+     * document {@code timestamp} field in descending order (newest first) and limited
+     * to {@code limit} entries.</p>
+     *
+     * @param targetId the target identifier to filter by (must not be null)
+     * @param limit maximum number of results to return
+     * @return a list of ProbeResult objects (empty list on errors)
+     */
     @Override
     public List<ProbeResult> findRecent(String targetId, int limit) {
         try {
+            // Use a match query against the keyword sub-field so exact target id matches work
             SearchRequest request = new SearchRequest.Builder()
                     .index(index)
                     .query(q -> q
-                            .term(t -> t
-                                    .field("targetId")
-                                    .value(targetId)
+                            .match(m -> m
+                                    .field("targetId.keyword")
+                                    .query(targetId)
                             )
                     )
                     .sort(s -> s
@@ -71,25 +85,39 @@ public class ElasticProbeRepository implements ProbeRepository {
             SearchResponse<ProbeResult> response =
                     client.search(request, ProbeResult.class);
 
-            return response.hits().hits().stream()
-                    .map(h -> h.source())
-                    .toList();
+            return extractHits(response);
 
         } catch (Exception ex) {
-            log.error("Failed to fetch recent probe results for target {}", targetId, ex);
-            return List.of();
+            log.error("Failed to fetch recent probe results for target {} with limit {}", targetId, limit, ex);
+            throw new ProbeRepositoryException("Failed to fetch recent probe results for target " + targetId, ex);
         }
     }
 
 
+    /**
+     * Find probe results for a target within a time range.
+     *
+     * <p>Performs a boolean query combining an exact match on the {@code targetId.keyword}
+     * field and a date range on the {@code timestamp} field. The start and end
+     * Instants are converted to ISO-8601 strings for the range boundaries. Results are
+     * sorted by {@code timestamp} descending (newest first). A hard size limit is set
+     * to 5000 to protect the cluster from excessively large queries; callers that
+     * expect more results should implement paging.</p>
+     *
+     * @param targetId the target identifier to filter by
+     * @param start inclusive start of the time range (Instant)
+     * @param end inclusive end of the time range (Instant)
+     * @return a list of ProbeResult objects within the specified range (empty on errors)
+     */
     @Override
     public List<ProbeResult> findBetween(String targetId, Instant start, Instant end) {
         try {
+            // Build a date range query using ISO-8601 strings for the start/end instants
             Query rangeQuery = Query.of(q -> q
                     .range(r -> r
                             .field("timestamp")
-                            .gte(JsonData.of(start.toEpochMilli()))
-                            .lte(JsonData.of(end.toEpochMilli()))
+                            .gte(JsonData.of(start.toString()))
+                            .lte(JsonData.of(end.toString()))
                     )
             );
 
@@ -97,24 +125,23 @@ public class ElasticProbeRepository implements ProbeRepository {
                     .index(index)
                     .query(q -> q
                             .bool(b -> b
-                                    .must(m -> m.term(t -> t.field("targetId").value(targetId)))
+                                    .must(m -> m.match(mt -> mt.field("targetId.keyword").query(targetId)))
                                     .must(rangeQuery)
                             )
                     )
-                    .sort(s -> s.field(f -> f.field("timestamp").order(SortOrder.Asc)))
+                    .sort(s -> s.field(f -> f.field("timestamp").order(SortOrder.Desc)))
+                    // allow a reasonably large window; callers should page if they expect more
                     .size(5000)
                     .build();
 
             SearchResponse<ProbeResult> response =
                     client.search(request, ProbeResult.class);
 
-            return response.hits().hits().stream()
-                    .map(h -> h.source())
-                    .toList();
+            return extractHits(response);
 
         } catch (Exception ex) {
             log.error("Failed to fetch history for {} between {} - {}", targetId, start, end, ex);
-            return List.of();
+            throw new ProbeRepositoryException("Failed to fetch history for target " + targetId + " between " + start + " - " + end, ex);
         }
     }
 
@@ -131,15 +158,30 @@ public class ElasticProbeRepository implements ProbeRepository {
                             ))
                     , ProbeResult.class);
 
-            if (response.hits().hits().isEmpty()) {
-                return Optional.empty();
-            }
-
-            return Optional.ofNullable(response.hits().hits().get(0).source());
+            return extractFirst(response);
 
         } catch (Exception ex) {
             log.error("Failed to fetch latest probe result", ex);
+            throw new ProbeRepositoryException("Failed to fetch latest probe result", ex);
+        }
+    }
+
+    // Helper to parse SearchResponse into List<ProbeResult>
+    private List<ProbeResult> extractHits(SearchResponse<ProbeResult> response) {
+        if (response == null || response.hits() == null || response.hits().hits().isEmpty()) {
+            return List.of();
+        }
+        return response.hits().hits().stream()
+                .map(h -> h.source())
+                .toList();
+    }
+
+    // Helper to extract the first hit as Optional
+    private Optional<ProbeResult> extractFirst(SearchResponse<ProbeResult> response) {
+        List<ProbeResult> hits = extractHits(response);
+        if (hits.isEmpty()) {
             return Optional.empty();
         }
+        return Optional.ofNullable(hits.get(0));
     }
 }

@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 
 import java.time.Instant;
 import java.util.List;
@@ -18,6 +19,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SpringBootTest
 public class ElasticProbeRepositoryIT {
 
+    @DynamicPropertySource
     static void registerProperties(DynamicPropertyRegistry registry) {
         registry.add("ict.elasticsearch.host", () -> TestElasticsearchContainer.ES.getHost());
         registry.add("ict.elasticsearch.port", () -> TestElasticsearchContainer.ES.getFirstMappedPort());
@@ -33,7 +35,7 @@ public class ElasticProbeRepositoryIT {
     }
 
     @Test
-    void saveAndRetrieveRecent() {
+    void saveAndRetrieveRecent() throws Exception {
         ProbeResult r = new ProbeResult(
                 Instant.now(),
                 "t1",
@@ -46,6 +48,9 @@ public class ElasticProbeRepositoryIT {
 
         repo.save(r);
 
+        // Allow Elasticsearch to refresh so documents are visible to search
+        Thread.sleep(1100);
+
         List<ProbeResult> results = repo.findRecent("t1", 10);
 
         assertThat(results).isNotEmpty();
@@ -53,7 +58,7 @@ public class ElasticProbeRepositoryIT {
     }
 
     @Test
-    void queryBetweenTimestamps() {
+    void queryBetweenTimestamps() throws Exception {
         Instant start = Instant.now().minusSeconds(60);
         Instant end = Instant.now().plusSeconds(60);
 
@@ -69,8 +74,63 @@ public class ElasticProbeRepositoryIT {
 
         repo.save(r);
 
+        // Allow Elasticsearch to refresh so documents are visible to search
+        Thread.sleep(1100);
+
         List<ProbeResult> results = repo.findBetween("t1", start, end);
 
         assertThat(results).isNotEmpty();
+    }
+
+    @Test
+    void findRecent_orderingAndLimitEnforced() throws Exception {
+        String target = "t-order";
+        Instant now = Instant.now();
+
+        ProbeResult newest = new ProbeResult(now, target, "host", 5L, ProbeStatus.UP, ProbeMethod.TCP, null);
+        ProbeResult mid = new ProbeResult(now.minusSeconds(10), target, "host", 6L, ProbeStatus.UP, ProbeMethod.TCP, null);
+        ProbeResult oldest = new ProbeResult(now.minusSeconds(20), target, "host", 7L, ProbeStatus.UP, ProbeMethod.TCP, null);
+
+        repo.save(oldest);
+        repo.save(mid);
+        repo.save(newest);
+
+        // Allow Elasticsearch to refresh so documents are visible to search
+        Thread.sleep(1100);
+
+        List<ProbeResult> results = repo.findRecent(target, 2);
+
+        assertThat(results).hasSize(2);
+        // newest first
+        assertThat(results.get(0).timestamp()).isAfter(results.get(1).timestamp());
+        assertThat(results.get(0).timestamp()).isEqualTo(newest.timestamp());
+    }
+
+    @Test
+    void findBetween_timeRangeFiltering() throws Exception {
+        String target = "t-range";
+        Instant now = Instant.now();
+
+        ProbeResult a = new ProbeResult(now.minusSeconds(30), target, "host", 1L, ProbeStatus.UP, ProbeMethod.TCP, null);
+        ProbeResult b = new ProbeResult(now.minusSeconds(20), target, "host", 2L, ProbeStatus.UP, ProbeMethod.TCP, null);
+        ProbeResult c = new ProbeResult(now.minusSeconds(10), target, "host", 3L, ProbeStatus.UP, ProbeMethod.TCP, null);
+        ProbeResult d = new ProbeResult(now, target, "host", 4L, ProbeStatus.UP, ProbeMethod.TCP, null);
+
+        repo.save(a);
+        repo.save(b);
+        repo.save(c);
+        repo.save(d);
+
+        // Allow Elasticsearch to refresh so documents are visible to search
+        Thread.sleep(1100);
+
+        Instant start = now.minusSeconds(25);
+        Instant end = now.minusSeconds(5);
+
+        List<ProbeResult> results = repo.findBetween(target, start, end);
+
+        // Should include b and c only
+        assertThat(results).hasSize(2);
+        assertThat(results).allSatisfy(rr -> assertThat(rr.timestamp()).isAfterOrEqualTo(start).isBeforeOrEqualTo(end));
     }
 }
