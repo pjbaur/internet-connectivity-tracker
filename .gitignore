@@ -3,7 +3,7 @@
 *.war
 
 # Maven
-target/
+/target/
 .mvn/
 .idea/
 *.iml

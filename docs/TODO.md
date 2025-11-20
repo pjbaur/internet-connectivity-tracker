@@ -50,11 +50,11 @@ This section tracks only the work required to ship the **MVP (v0.1.0)** as defin
     - [x] Verify logging and behavior on success and failure paths.
 
 ### ◻ A3. Implement `getLatestStatus()` in `ProbeServiceImpl`
-- [ ] Use `ProbeRepository.findLatest()` (returning `Optional<ProbeResult>`).
-- [ ] Decide on behavior when no results exist for MVP (e.g., return `null` and let controller map to 204/200).
-- [ ] Add unit test for `getLatestStatus()`:
-    - [ ] Case where a latest result is present.
-    - [ ] Case where repository returns `Optional.empty()`.
+- [x] Use `ProbeRepository.findLatest()` (returning `Optional<ProbeResult>`).
+- [x] Decide on behavior when no results exist for MVP (e.g., return `null` and let controller map to 204/200).
+- [x] Add unit test for `getLatestStatus()`:
+    - [x] Case where the latest result is present.
+    - [x] Case where repository returns `Optional.empty()`.
 
 ---
 
