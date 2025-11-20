@@ -62,30 +62,30 @@ This section tracks only the work required to ship the **MVP (v0.1.0)** as defin
 
 ### ◻ B1. Implement `TargetManager` (round-robin selection)
 - Provide an in-memory, thread-safe manager:
-    - [ ] `List<Target> listTargets()`
-    - [ ] `Target addTarget(...)`
-    - [ ] `void removeTarget(String id)`
-    - [ ] `Optional<Target> nextTargetRoundRobin()`
+    - [x] `List<Target> listTargets()`
+    - [x] `Target addTarget(...)`
+    - [x] `void removeTarget(String id)`
+    - [x] `Optional<Target> nextTargetRoundRobin()`
 - Behavior:
-    - [ ] If there are no targets, `nextTargetRoundRobin()` returns empty.
-    - [ ] Round-robin should cycle fairly through all targets.
+    - [x] If there are no targets, `nextTargetRoundRobin()` returns empty.
+    - [x] Round-robin should cycle fairly through all targets.
 - Add unit tests:
-    - [ ] Single target behavior.
-    - [ ] Multiple target cycling.
-    - [ ] Removing targets updates the cycle correctly.
+    - [x] Single target behavior.
+    - [x] Multiple target cycling.
+    - [x] Removing targets updates the cycle correctly.
 
 ### ◻ B2. Implement scheduled probing loop
 - Implement a Spring `@Scheduled` method in a scheduler component (or in `ProbeServiceImpl` wrapper) that:
-    - [ ] Runs on a configurable fixed interval (`ict.probe.interval-ms`, default 1000ms).
-    - [ ] Fetches `nextTargetRoundRobin()` from `TargetManager`.
-    - [ ] If a target is present, calls `ProbeService.probe(target)`; otherwise logs a warning but does nothing.
-    - [ ] Catches and logs any exception to avoid killing the scheduler thread.
+    - [x] Runs on a configurable fixed interval (`ict.probe.interval-ms`, default 1000ms).
+    - [x] Fetches `nextTargetRoundRobin()` from `TargetManager`.
+    - [x] If a target is present, calls `ProbeService.probe(target)`; otherwise logs a warning but does nothing.
+    - [x] Catches and logs any exception to avoid killing the scheduler thread.
 - Add configuration:
-    - [ ] Property in `application.yml` / `application.properties` for probe interval.
-    - [ ] Reasonable default for MVP (1000ms).
+    - [x] Property in `application.yml` / `application.properties` for probe interval.
+    - [x] Reasonable default for MVP (1000ms).
 
-### ◻ B3. Scheduler tests
-- [ ] Add unit tests where the scheduling method is invoked directly (no real time delays) to verify:
+### ✅ B3. Scheduler tests
+- [x] Add unit tests where the scheduling method is invoked directly (no real time delays) to verify:
     - Behavior with 0, 1, and many targets.
     - That it delegates to `ProbeService.probe(...)` exactly as expected.
 
