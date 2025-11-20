@@ -116,6 +116,31 @@ class ProbeServiceImplTest {
         assertThat(probeRepositoryStub.getSavedResults()).isEmpty();
     }
 
+    @Test
+    void getLatestProbeResult_whenResultPresent_returnsResult() {
+        // Arrange
+        ProbeResult latestResult = new ProbeResult(Instant.now(), TEST_TARGET_ID.toString(), "example.com", 50L, ProbeStatus.UP, ProbeMethod.TCP, null);
+        probeRepositoryStub.setNextLatestResult(latestResult);
+
+        // Act
+        ProbeResult result = probeService.getLatestProbeResult();
+
+        // Assert
+        assertThat(result).isEqualTo(latestResult);
+    }
+
+    @Test
+    void getLatestProbeResult_whenNoResultPresent_returnsNull() {
+        // Arrange
+        probeRepositoryStub.setNextLatestResult(null); // Ensure it's explicitly null
+
+        // Act
+        ProbeResult result = probeService.getLatestProbeResult();
+
+        // Assert
+        assertThat(result).isNull();
+    }
+
     // --- Test Doubles ---
 
     static class ProbeStrategySpy implements ProbeStrategy {
@@ -142,6 +167,7 @@ class ProbeServiceImplTest {
 
     static class ProbeRepositoryStub implements ProbeRepository {
         private final List<ProbeResult> savedResults = new ArrayList<>();
+        private ProbeResult nextLatestResult;
 
         @Override
         public void save(ProbeResult result) {
@@ -150,7 +176,7 @@ class ProbeServiceImplTest {
 
         @Override
         public Optional<ProbeResult> findLatest() {
-            return Optional.empty();
+            return Optional.ofNullable(nextLatestResult);
         }
 
         @Override
@@ -165,6 +191,10 @@ class ProbeServiceImplTest {
 
         public List<ProbeResult> getSavedResults() {
             return savedResults;
+        }
+
+        public void setNextLatestResult(ProbeResult nextLatestResult) {
+            this.nextLatestResult = nextLatestResult;
         }
     }
 

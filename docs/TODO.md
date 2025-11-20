@@ -36,18 +36,18 @@ This section tracks only the work required to ship the **MVP (v0.1.0)** as defin
 
 ### ◻ A2. Implement full probing workflow in `ProbeServiceImpl.probe(...)`
 - Implement the main probing method to:
-    - [ ] Build a `ProbeRequest` from the chosen `Target`.
-    - [ ] Delegate to `ProbeStrategy` (currently `TcpProbeStrategy`).
-    - [ ] Persist the resulting `ProbeResult` via `ProbeRepository.save(...)`.
-    - [ ] Perform structured logging (`log.info/debug/error`) for:
+    - [x] Build a `ProbeRequest` from the chosen `Target`.
+    - [x] Delegate to `ProbeStrategy` (currently `TcpProbeStrategy`).
+    - [x] Persist the resulting `ProbeResult` via `ProbeRepository.save(...)`.
+    - [x] Perform structured logging (`log.info/debug/error`) for:
         - target, status, latency, errorMessage, method.
 - Error handling:
-    - [ ] Wrap unexpected exceptions in a domain-appropriate error and map to a DOWN result (do not crash the scheduler).
-    - [ ] Ensure logging includes enough context for debugging (target ID, host, port).
+    - [x] Wrap unexpected exceptions in a domain-appropriate error and map to a DOWN result (do not crash the scheduler).
+    - [x] Ensure logging includes enough context for debugging (target ID, host, port).
 - Add unit tests for `ProbeServiceImpl`:
-    - [ ] Verify it calls `ProbeStrategy` with the expected request.
-    - [ ] Verify it calls `ProbeRepository.save(...)` with the resulting `ProbeResult`.
-    - [ ] Verify logging and behavior on success and failure paths.
+    - [x] Verify it calls `ProbeStrategy` with the expected request.
+    - [x] Verify it calls `ProbeRepository.save(...)` with the resulting `ProbeResult`.
+    - [x] Verify logging and behavior on success and failure paths.
 
 ### ◻ A3. Implement `getLatestStatus()` in `ProbeServiceImpl`
 - [ ] Use `ProbeRepository.findLatest()` (returning `Optional<ProbeResult>`).
