@@ -2,6 +2,7 @@ package me.paulbaur.ict.probe.service;
 
 import me.paulbaur.ict.probe.domain.ProbeResult;
 
+import java.time.Instant;
 import java.util.List;
 
 public interface ProbeService {
@@ -13,4 +14,6 @@ public interface ProbeService {
     void runScheduledProbes();
 
     List<ProbeResult> getRecentResults(String targetId, int limit);
+
+    List<ProbeResult> getHistory(String targetId, int limit, Instant start, Instant end);
 }

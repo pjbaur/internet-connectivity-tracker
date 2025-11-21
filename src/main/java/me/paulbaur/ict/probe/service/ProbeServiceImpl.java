@@ -89,6 +89,23 @@ public class ProbeServiceImpl implements ProbeService {
     }
 
     @Override
+    public List<ProbeResult> getHistory(String targetId, int limit, Instant start, Instant end) {
+        try {
+            if (start != null && end != null) {
+                List<ProbeResult> results = probeRepository.findBetween(targetId, start, end);
+                return results.stream()
+                        .limit(limit)
+                        .toList();
+            }
+
+            return probeRepository.findRecent(targetId, limit);
+        } catch (Exception ex) {
+            log.error("Failed to retrieve history for {} between {} and {}", targetId, start, end, ex);
+            return Collections.emptyList();
+        }
+    }
+
+    @Override
     public void probe(String targetId) {
         UUID targetUUID = UUID.fromString(targetId);
         targetRepository.findById(targetUUID)
