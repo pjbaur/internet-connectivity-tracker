@@ -43,10 +43,13 @@ class OpenApiDocsIT {
         // ensure /api/status appears as a documented path
         assertTrue(paths.has("/api/status"), "Expected '/api/status' to be present in OpenAPI paths");
 
-        // history-like endpoints: accept any of these to be present (some apps use /api/probe-results or /api/probe-results/latest)
-        List<String> historyCandidates = List.of("/api/history", "/api/probe-results", "/api/probe-results/latest");
+        // latest probe result endpoint must be present
+        assertTrue(paths.has("/api/probe-results/latest"), "Expected '/api/probe-results/latest' to be present in OpenAPI paths");
+
+        // history-like endpoints: accept either legacy history or the probe-results collection
+        List<String> historyCandidates = List.of("/api/history", "/api/probe-results");
         boolean foundHistory = historyCandidates.stream().anyMatch(paths::has);
-        assertTrue(foundHistory, "Expected at least one history-like path to be present: " + historyCandidates);
+        assertTrue(foundHistory, "Expected a history-like path to be present: " + historyCandidates);
 
         // ensure there is at least one tag defined
         JsonNode tags = root.path("tags");
