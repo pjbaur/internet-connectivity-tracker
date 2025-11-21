@@ -60,7 +60,7 @@ Suggestions:
   }
   ```
 
-* Optionally add a **true history endpoint** matching `API_SPEC.md`, maybe in a `history` slice or reuse `probe` if you keep it simple for MVP.
+* Optionally add a **true history endpoint** matching `/docs/API_SPEC.md`, maybe in a `history` slice or reuse `probe` if you keep it simple for MVP.
 
 * Decide whether an **on-demand probe** endpoint belongs here (`POST /api/probe/{targetId}` → calls `probeService.probe(targetId)`).
 

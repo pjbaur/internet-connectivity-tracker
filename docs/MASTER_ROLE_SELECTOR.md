@@ -162,7 +162,7 @@ AI tools (ChatGPT Agent Mode) assist with code scaffolding, architectural consis
 
 * README.md
 * Architecture.md updates
-* API_SPEC.md
+* /docs/API_SPEC.md
 * Developer onboarding materials
 
 ---

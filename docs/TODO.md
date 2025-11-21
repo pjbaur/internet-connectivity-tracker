@@ -195,7 +195,7 @@ Your current `/api/status` mixes these concepts.
 
 * [ ] Update `StatusController`
 * [ ] Update `ProbeService` naming & methods
-* [ ] Update `API_SPEC.md`
+* [ ] Update `/docs/API_SPEC.md`
 * [ ] Update `OpenApiDocsIT`
 * [ ] Update system documentation (`ARCHITECTURE.md` / PRD references)
 
@@ -273,7 +273,7 @@ Using local `docker-compose`:
 ## **7. Documentation Alignment (Must for MVP Polish)**
 
 * [ ] Update `ROADMAP.md` (remove ICMP from MVP)
-* [ ] Update `API_SPEC.md` (new endpoint names)
+* [ ] Update `/docs/API_SPEC.md` (new endpoint names)
 * [ ] Update `PRD.md` if needed
 * [ ] Update `ARCHITECTURE.md` where endpoints or flows changed
 * [ ] Update `TEST_PLAN.md` to describe new test cases

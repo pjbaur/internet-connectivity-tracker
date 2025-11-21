@@ -30,7 +30,7 @@ This roadmap outlines functional milestones **and** the integration of **AI-assi
 
     * `MASTER_ROLE_SELECTOR.md`
     * `ARCHITECTURE.md`
-    * `API_SPEC.md`
+    * `/docs/API_SPEC.md`
     * `TEST_PLAN.md`
 * Auto-generate basic Testcontainers integration setup
 * Maintain code consistency via agent-based refactoring
@@ -58,7 +58,7 @@ This roadmap outlines functional milestones **and** the integration of **AI-assi
 * Create Kibana dashboard JSON via AI-assisted modeling
 * Auto-update integration tests for ES read/write behavior
 * Maintain architectural diagrams (Mermaid)
-* Improve API documentation and examples in `API_SPEC.md`
+* Improve API documentation and examples in `/docs/API_SPEC.md`
 
 ---
 

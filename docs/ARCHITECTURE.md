@@ -549,4 +549,4 @@ The application uses `springdoc-openapi` to automatically generate an OpenAPI 3 
 
 These endpoints are treated as the source of truth for the HTTP contract and can be used in CI to validate the API surface.
 
-See API_SPEC.md for endpoint definitions.
+See `/docs/API_SPEC.md` for endpoint definitions.
