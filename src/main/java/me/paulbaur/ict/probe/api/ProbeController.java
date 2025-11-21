@@ -41,6 +41,31 @@ public class ProbeController {
         this.probeService = probeService;
     }
 
+    @Operation(
+            summary = "Get most recent probe result",
+            description = "Returns the most recent probe result recorded across all targets."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Latest probe result",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = ProbeResultDto.class),
+                            examples = {@ExampleObject(name = "latest", value = "{\"timestamp\":\"2025-11-19T12:34:56Z\",\"targetId\":\"00000000-0000-0000-0000-000000000000\",\"targetHost\":\"example.org\",\"latencyMs\":23,\"status\":\"UP\",\"method\":\"TCP\",\"errorMessage\":null}")})
+            ),
+            @ApiResponse(responseCode = "404", description = "No probe result available",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(responseCode = "500", description = "Internal server error. TODO: Align controller to return structured ErrorResponse",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))
+            )
+    })
+    @GetMapping("/probe-results/latest")
+    public ResponseEntity<?> latest() {
+        return probeService.getLatestProbeResult()
+                .<ResponseEntity<?>>map(result -> ResponseEntity.ok(ProbeResultDto.fromDomain(result)))
+                .orElseGet(() -> ResponseEntity.status(404)
+                        .body(new ErrorResponse("No probe result available", "NOT_FOUND", Instant.now())));
+    }
+
     /**
      * Returns the most recent probe results for a given target.
      * @param targetId the ID of the target to get results for

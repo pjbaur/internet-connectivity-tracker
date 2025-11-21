@@ -123,22 +123,22 @@ class ProbeServiceImplTest {
         probeRepositoryStub.setNextLatestResult(latestResult);
 
         // Act
-        ProbeResult result = probeService.getLatestProbeResult();
+        ProbeResult result = probeService.getLatestProbeResult().orElseThrow();
 
         // Assert
         assertThat(result).isEqualTo(latestResult);
     }
 
     @Test
-    void getLatestProbeResult_whenNoResultPresent_returnsNull() {
+    void getLatestProbeResult_whenNoResultPresent_returnsEmptyOptional() {
         // Arrange
         probeRepositoryStub.setNextLatestResult(null); // Ensure it's explicitly null
 
         // Act
-        ProbeResult result = probeService.getLatestProbeResult();
+        Optional<ProbeResult> result = probeService.getLatestProbeResult();
 
         // Assert
-        assertThat(result).isNull();
+        assertThat(result).isEmpty();
     }
 
     // --- Test Doubles ---
