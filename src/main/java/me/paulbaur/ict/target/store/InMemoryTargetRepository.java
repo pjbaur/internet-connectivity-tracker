@@ -29,7 +29,7 @@ public class InMemoryTargetRepository implements TargetRepository {
     }
 
     @Override
-    public void delete(UUID id) {
-        targets.remove(id);
+    public boolean delete(UUID id) {
+        return targets.remove(id) != null;
     }
 }

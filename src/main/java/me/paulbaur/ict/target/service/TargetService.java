@@ -11,5 +11,5 @@ public interface TargetService {
 
     Target create(Target target);
 
-    void delete(UUID id);
+    boolean delete(UUID id);
 }

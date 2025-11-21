@@ -203,7 +203,7 @@ class ProbeServiceImplTest {
 
         @Override
         public List<Target> findAll() {
-            return List.of();
+            return new ArrayList<>(targets);
         }
 
         @Override
@@ -213,12 +213,13 @@ class ProbeServiceImplTest {
 
         @Override
         public Target save(Target target) {
-            return null;
+            targets.add(target);
+            return target;
         }
 
         @Override
-        public void delete(UUID id) {
-
+        public boolean delete(UUID id) {
+            return targets.removeIf(t -> t.getId().equals(id));
         }
     }
 

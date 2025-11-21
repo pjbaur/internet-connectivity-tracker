@@ -26,7 +26,7 @@ public class TargetServiceImpl implements TargetService {
     }
 
     @Override
-    public void delete(UUID id) {
-        repo.delete(id);
+    public boolean delete(UUID id) {
+        return repo.delete(id);
     }
 }

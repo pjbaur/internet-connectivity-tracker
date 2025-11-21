@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -46,7 +47,10 @@ public class ProbeController {
      * @param limit the maximum number of results to return
      * @return a list of probe results
      */
-    @Operation(summary = "Get recent probe results for a target", description = "Returns up to `limit` recent probe results for the given targetId.")
+    @Operation(
+            summary = "Get recent probe results for a target",
+            description = "Returns up to `limit` recent probe results for the given targetId."
+    )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "A list of recent probe results",
                     content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
@@ -63,7 +67,8 @@ public class ProbeController {
     })
     @GetMapping("/probe/targets/{targetId}/recent")
     public ResponseEntity<?> recent(
-            @PathVariable String targetId,
+            @Parameter(description = "Target ID (UUID)") @PathVariable String targetId,
+            @Parameter(description = "Maximum number of results to return", example = "20")
             @RequestParam(defaultValue = "20") int limit
     ) {
         if (targetId == null || targetId.isBlank()) {
@@ -97,9 +102,13 @@ public class ProbeController {
     })
     @GetMapping("/history")
     public ResponseEntity<?> history(
+            @Parameter(description = "Target ID (UUID)", required = true)
             @RequestParam(name = "targetId") String targetId,
+            @Parameter(description = "Maximum number of results to return", example = "100")
             @RequestParam(name = "limit", defaultValue = "100") int limit,
+            @Parameter(description = "Inclusive start of the time range (ISO-8601)", example = "2025-11-19T10:00:00Z")
             @RequestParam(name = "start", required = false) String start,
+            @Parameter(description = "Inclusive end of the time range (ISO-8601)", example = "2025-11-19T12:00:00Z")
             @RequestParam(name = "end", required = false) String end
     ) {
         if (targetId == null || targetId.isBlank()) {
