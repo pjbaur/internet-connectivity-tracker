@@ -70,7 +70,7 @@ public class StatusController {
     }
 
     private ProbeResult latestResultForTarget(Target target) {
-        List<ProbeResult> results = probeService.getRecentResults(target.getId().toString(), 1);
+        List<ProbeResult> results = probeService.getRecentResultsForTarget(target.getId().toString(), 1);
         if (results == null || results.isEmpty()) {
             return null;
         }

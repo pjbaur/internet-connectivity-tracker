@@ -10,11 +10,11 @@ public interface ProbeService {
 
     void probe(String target);
 
-    Optional<ProbeResult> getLatestProbeResult();
+    Optional<ProbeResult> getLatestResult();
 
     void runScheduledProbes();
 
-    List<ProbeResult> getRecentResults(String targetId, int limit);
+    List<ProbeResult> getRecentResultsForTarget(String targetId, int limit);
 
-    List<ProbeResult> getHistory(String targetId, int limit, Instant start, Instant end);
+    List<ProbeResult> getHistoryForTarget(String targetId, int limit, Instant start, Instant end);
 }

@@ -60,7 +60,7 @@ public class ProbeController {
     })
     @GetMapping("/probe-results/latest")
     public ResponseEntity<?> latest() {
-        return probeService.getLatestProbeResult()
+        return probeService.getLatestResult()
                 .<ResponseEntity<?>>map(result -> ResponseEntity.ok(ProbeResultDto.fromDomain(result)))
                 .orElseGet(() -> ResponseEntity.status(404)
                         .body(new ErrorResponse("No probe result available", "NOT_FOUND", Instant.now())));
@@ -103,7 +103,7 @@ public class ProbeController {
             return validationError("limit must be between 1 and " + MAX_LIMIT);
         }
 
-        List<ProbeResultDto> results = ProbeResultDto.fromDomainList(probeService.getRecentResults(targetId, limit));
+        List<ProbeResultDto> results = ProbeResultDto.fromDomainList(probeService.getRecentResultsForTarget(targetId, limit));
         return ResponseEntity.ok(results);
     }
 
@@ -161,7 +161,7 @@ public class ProbeController {
             return validationError("start must be before end");
         }
 
-        List<ProbeResultDto> results = ProbeResultDto.fromDomainList(probeService.getHistory(targetId, limit, startInstant, endInstant));
+        List<ProbeResultDto> results = ProbeResultDto.fromDomainList(probeService.getHistoryForTarget(targetId, limit, startInstant, endInstant));
         return ResponseEntity.ok(results);
     }
 

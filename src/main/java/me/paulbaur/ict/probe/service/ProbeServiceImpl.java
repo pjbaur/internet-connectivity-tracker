@@ -69,7 +69,7 @@ public class ProbeServiceImpl implements ProbeService {
             Target target = targetSelector.nextTarget();
 
             if (target != null) {
-                probe(target); // Delegate to the new central probe method
+                probe(target);
             } else {
                 log.warn("No targets configured - skipping probe tick");
             }
@@ -80,7 +80,7 @@ public class ProbeServiceImpl implements ProbeService {
     }
 
     @Override
-    public List<ProbeResult> getRecentResults(String targetId, int limit) {
+    public List<ProbeResult> getRecentResultsForTarget(String targetId, int limit) {
         try {
             return probeRepository.findRecent(targetId, limit);
         } catch (Exception ex) {
@@ -90,7 +90,7 @@ public class ProbeServiceImpl implements ProbeService {
     }
 
     @Override
-    public List<ProbeResult> getHistory(String targetId, int limit, Instant start, Instant end) {
+    public List<ProbeResult> getHistoryForTarget(String targetId, int limit, Instant start, Instant end) {
         try {
             if (start != null && end != null) {
                 List<ProbeResult> results = probeRepository.findBetween(targetId, start, end);
@@ -117,7 +117,7 @@ public class ProbeServiceImpl implements ProbeService {
     }
 
     @Override
-    public Optional<ProbeResult> getLatestProbeResult() {
+    public Optional<ProbeResult> getLatestResult() {
         return probeRepository.findLatest();
     }
 }

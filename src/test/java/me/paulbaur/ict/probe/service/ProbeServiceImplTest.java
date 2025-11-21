@@ -117,25 +117,25 @@ class ProbeServiceImplTest {
     }
 
     @Test
-    void getLatestProbeResult_whenResultPresent_returnsResult() {
+    void getLatestResult_whenResultPresent_returnsResult() {
         // Arrange
         ProbeResult latestResult = new ProbeResult(Instant.now(), TEST_TARGET_ID.toString(), "example.com", 50L, ProbeStatus.UP, ProbeMethod.TCP, null);
         probeRepositoryStub.setNextLatestResult(latestResult);
 
         // Act
-        ProbeResult result = probeService.getLatestProbeResult().orElseThrow();
+        ProbeResult result = probeService.getLatestResult().orElseThrow();
 
         // Assert
         assertThat(result).isEqualTo(latestResult);
     }
 
     @Test
-    void getLatestProbeResult_whenNoResultPresent_returnsEmptyOptional() {
+    void getLatestResult_whenNoResultPresent_returnsEmptyOptional() {
         // Arrange
         probeRepositoryStub.setNextLatestResult(null); // Ensure it's explicitly null
 
         // Act
-        Optional<ProbeResult> result = probeService.getLatestProbeResult();
+        Optional<ProbeResult> result = probeService.getLatestResult();
 
         // Assert
         assertThat(result).isEmpty();
