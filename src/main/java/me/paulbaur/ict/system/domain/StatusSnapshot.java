@@ -15,6 +15,9 @@ public record StatusSnapshot(
         int totalTargets,
 
         @Schema(description = "Number of targets currently down", example = "0")
-        int targetsDown
+        int targetsDown,
+
+        @Schema(description = "Number of targets without any probe history (no data yet)", example = "1")
+        int unknownTargets
 ) {
 }
