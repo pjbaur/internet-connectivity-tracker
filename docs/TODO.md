@@ -37,6 +37,118 @@
 
 ---
 
+### More tasks for consideration:
+* Replace `Thread.sleep` refresh waits with an explicit refresh API call in tests or use the `IndexRequest` refresh parameter.
+* Add more tests to exercise paging and boundary conditions (empty results, large limits).
+* Add an integration test that asserts `findLatest()` behavior.
+
+#### Yet more:
+
+I'll create several ready-to-paste Java snippets that produce multiple `ProbeResult` instances with staggered timestamps 
+(single-target, multi-target, and a small helper to generate any count/interval). You can drop these into your tests 
+(for example `ElasticProbeRepositoryIT`) or use them from a small helper.
+
+Checklist
+* Example: fixed list of staggered `ProbeResult` instances for one target
+* Example: staggered instances across multiple targets
+* Helper method to generate N `ProbeResult` instances with a given interval
+* Example usage showing how to save them via `repo.save(...)` and wait for ES refresh
+ 
+#### Fixed list for one target (7 entries, 10s apart)
+```java
+import java.time.Instant;
+import java.util.List;
+import me.paulbaur.ict.probe.domain.ProbeResult;
+import me.paulbaur.ict.common.model.ProbeStatus;
+import me.paulbaur.ict.common.model.ProbeMethod;
+
+List<ProbeResult> results = List.of(
+    new ProbeResult(Instant.now().minusSeconds(60), "target-1", "host1.example", 25L, ProbeStatus.UP, ProbeMethod.TCP, null),
+    new ProbeResult(Instant.now().minusSeconds(50), "target-1", "host1.example", 30L, ProbeStatus.UP, ProbeMethod.TCP, null),
+    new ProbeResult(Instant.now().minusSeconds(40), "target-1", "host1.example", 28L, ProbeStatus.UP, ProbeMethod.TCP, null),
+    new ProbeResult(Instant.now().minusSeconds(30), "target-1", "host1.example", 35L, ProbeStatus.DOWN, ProbeMethod.TCP, "timeout"),
+    new ProbeResult(Instant.now().minusSeconds(20), "target-1", "host1.example", 22L, ProbeStatus.UP, ProbeMethod.TCP, null),
+    new ProbeResult(Instant.now().minusSeconds(10), "target-1", "host1.example", 20L, ProbeStatus.UP, ProbeMethod.TCP, null),
+    new ProbeResult(Instant.now(),                  "target-1", "host1.example", 18L, ProbeStatus.UP, ProbeMethod.TCP, null)
+)
+```
+        
+#### Multiple targets with staggered timestamps (interleaved)
+```java
+import java.time.Instant;
+import java.util.List;
+
+List<ProbeResult> multi = List.of(
+    new ProbeResult(Instant.now().minusSeconds(30), "tA", "a.example", 10L, ProbeStatus.UP,   ProbeMethod.TCP, null),
+    new ProbeResult(Instant.now().minusSeconds(25), "tB", "b.example", 50L, ProbeStatus.DOWN, ProbeMethod.TCP, "conn refused"),
+    new ProbeResult(Instant.now().minusSeconds(20), "tA", "a.example", 12L, ProbeStatus.UP,   ProbeMethod.TCP, null),
+    new ProbeResult(Instant.now().minusSeconds(15), "tC", "c.example", 70L, ProbeStatus.DOWN, ProbeMethod.TCP, "timeout"),
+    new ProbeResult(Instant.now().minusSeconds(10), "tB", "b.example", 45L, ProbeStatus.UP,   ProbeMethod.TCP, null),
+    new ProbeResult(Instant.now().minusSeconds(5),  "tA", "a.example", 11L, ProbeStatus.UP,   ProbeMethod.TCP, null),
+    new ProbeResult(Instant.now(),                  "tC", "c.example", 60L, ProbeStatus.UP,   ProbeMethod.TCP, null)
+);
+```
+
+#### Helper to generate N staggered ProbeResult instances for a single target
+```java
+import java.time.Instant;
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
+import me.paulbaur.ict.probe.domain.ProbeResult;
+import me.paulbaur.ict.common.model.ProbeStatus;
+import me.paulbaur.ict.common.model.ProbeMethod;
+
+public static List<ProbeResult> generateStaggered(String targetId, String host, int count, Duration interval, Instant start) {
+    List<ProbeResult> out = new ArrayList<>(count);
+    
+    for (int i = 0; i < count; i++) {
+        Instant ts = start.minusSeconds(interval.getSeconds() * (count - 1 - i)); // oldest first
+        
+        // Alternate UP/DOWN for variety
+        boolean up = (i % 4) != 3;
+        out.add(new ProbeResult(
+            ts,
+            targetId,
+            host,
+            up ? 20L + i : null, // latency null when DOWN
+            up ? ProbeStatus.UP : ProbeStatus.DOWN,
+            ProbeMethod.TCP,
+            up ? null : "simulated failure"
+        ));
+    }
+    return out;
+}
+
+// Example usage:
+List<ProbeResult> generated = generateStaggered("target-x", "hostx", 8, Duration.ofSeconds(10), Instant.now());
+```
+
+Saving generated results into repository (example snippet for tests)
+```java
+// repo is an autowired ProbeRepository in the test
+List<ProbeResult> docs = generateStaggered("target-x", "hostx", 8, Duration.ofSeconds(10), Instant.now());
+for (ProbeResult r : docs) {
+    repo.save(r);
+}
+
+// Option A (simple): wait for ES refresh
+Thread.sleep(1100);
+
+// Option B (better): if you want to avoid sleeps, either update repo.save to index with refresh or call ES refresh API from test.
+```
+
+Notes and tips
+* The project uses ISO-8601 Instants (we configured Jackson to serialize Instant correctly), so these `Instant` values will index and be queryable by date-range.
+* In tests you should either wait for the ES refresh (as shown) or index with an explicit refresh (not done in the repository currently).
+* For ordering assertions, ensure you depend on the timestamp field (descending) and test limit enforcement by calling repo.findRecent(target, limit).
+
+If you want, I can:
+* Insert one of these example blocks directly into `ElasticProbeRepositoryIT` for you and run tests, or
+* Create a small utility test helper class (e.g., `TestProbeData`) with the generator method and some pre-built datasets. Which would you prefer?
+
+---
+
 ## **2. Finish History Endpoints**
 
 Located in `ProbeController`.
