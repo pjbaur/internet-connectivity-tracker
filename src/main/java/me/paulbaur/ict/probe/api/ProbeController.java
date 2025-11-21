@@ -109,31 +109,22 @@ public class ProbeController {
             return validationError("limit must be between 1 and " + MAX_LIMIT);
         }
 
-        Instant startInstant = null;
-        Instant endInstant = null;
-
-        if (start != null && !start.isBlank()) {
-            try {
-                startInstant = Instant.parse(start);
-            } catch (DateTimeParseException ex) {
-                return validationError("start must be an ISO-8601 timestamp");
-            }
+        Instant startInstant = parseInstantOrNull("start", start);
+        if (startInstant == null && hasText(start)) {
+            return validationError("start must be an ISO-8601 timestamp");
         }
 
-        if (end != null && !end.isBlank()) {
-            try {
-                endInstant = Instant.parse(end);
-            } catch (DateTimeParseException ex) {
-                return validationError("end must be an ISO-8601 timestamp");
-            }
+        Instant endInstant = parseInstantOrNull("end", end);
+        if (endInstant == null && hasText(end)) {
+            return validationError("end must be an ISO-8601 timestamp");
         }
 
         if ((startInstant == null) != (endInstant == null)) {
             return validationError("start and end must both be provided together");
         }
 
-        if (startInstant != null && startInstant.isAfter(endInstant)) {
-            return validationError("start must be before or equal to end");
+        if (startInstant != null && !startInstant.isBefore(endInstant)) {
+            return validationError("start must be before end");
         }
 
         List<ProbeResultDto> results = ProbeResultDto.fromDomainList(probeService.getHistory(targetId, limit, startInstant, endInstant));
@@ -142,6 +133,25 @@ public class ProbeController {
 
     private boolean isValidLimit(int limit) {
         return limit > 0 && limit <= MAX_LIMIT;
+    }
+
+    private Instant parseInstantOrNull(String paramName, String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        if (trimmed.isEmpty()) {
+            return null;
+        }
+        try {
+            return Instant.parse(trimmed);
+        } catch (DateTimeParseException ex) {
+            return null;
+        }
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.trim().isEmpty();
     }
 
     private ResponseEntity<ErrorResponse> validationError(String message) {
