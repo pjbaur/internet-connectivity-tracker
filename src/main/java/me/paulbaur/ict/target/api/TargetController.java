@@ -1,5 +1,6 @@
 package me.paulbaur.ict.target.api;
 
+import me.paulbaur.ict.common.exception.NotFoundException;
 import me.paulbaur.ict.common.model.ErrorResponse;
 import me.paulbaur.ict.target.api.dto.TargetRequestDto;
 import me.paulbaur.ict.target.api.dto.TargetResponseDto;
@@ -18,7 +19,6 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 
-import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -65,11 +65,8 @@ public class TargetController {
                     content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))
             )
     })
-    public ResponseEntity<?> createTarget(@RequestBody(required = false) TargetRequestDto request) {
-        ResponseEntity<ErrorResponse> validationError = validateCreateRequest(request);
-        if (validationError != null) {
-            return validationError;
-        }
+    public ResponseEntity<TargetResponseDto> createTarget(@RequestBody(required = false) TargetRequestDto request) {
+        validateCreateRequest(request);
 
         Target newTarget = new Target(
                 UUID.randomUUID(),
@@ -95,58 +92,44 @@ public class TargetController {
                     content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))
             )
     })
-    public ResponseEntity<?> deleteTarget(@PathVariable String id) {
+    public ResponseEntity<Void> deleteTarget(@PathVariable String id) {
         if (!hasText(id)) {
-            return validationError("id is required");
+            throw new IllegalArgumentException("id is required");
         }
 
         UUID targetId = parseUuid(id);
-        if (targetId == null) {
-            return validationError("id must be a valid UUID");
-        }
 
         boolean deleted = targetService.delete(targetId);
         if (!deleted) {
-            return notFoundError("Target not found for id " + id);
+            throw new NotFoundException("Target not found for id " + id);
         }
 
         return ResponseEntity.noContent().build();
     }
 
-    private ResponseEntity<ErrorResponse> validateCreateRequest(TargetRequestDto request) {
+    private void validateCreateRequest(TargetRequestDto request) {
         if (request == null) {
-            return validationError("Request body is required");
+            throw new IllegalArgumentException("Request body is required");
         }
         if (!hasText(request.label())) {
-            return validationError("label is required");
+            throw new IllegalArgumentException("label is required");
         }
         if (!hasText(request.host())) {
-            return validationError("host is required");
+            throw new IllegalArgumentException("host is required");
         }
         if (request.port() == null) {
-            return validationError("port is required");
+            throw new IllegalArgumentException("port is required");
         }
         if (request.port() < MIN_PORT || request.port() > MAX_PORT) {
-            return validationError("port must be between " + MIN_PORT + " and " + MAX_PORT);
+            throw new IllegalArgumentException("port must be between " + MIN_PORT + " and " + MAX_PORT);
         }
-        return null;
-    }
-
-    private ResponseEntity<ErrorResponse> validationError(String message) {
-        ErrorResponse error = new ErrorResponse(message, "VALIDATION_ERROR", Instant.now());
-        return ResponseEntity.badRequest().body(error);
-    }
-
-    private ResponseEntity<ErrorResponse> notFoundError(String message) {
-        ErrorResponse error = new ErrorResponse(message, "NOT_FOUND", Instant.now());
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
     }
 
     private UUID parseUuid(String id) {
         try {
             return UUID.fromString(id.trim());
         } catch (IllegalArgumentException ex) {
-            return null;
+            throw new IllegalArgumentException("id must be a valid UUID", ex);
         }
     }
 

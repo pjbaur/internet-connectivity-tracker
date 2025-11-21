@@ -14,6 +14,8 @@ import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.time.Instant;
+import java.util.Objects;
+import java.util.function.Supplier;
 
 @Slf4j
 @Component
@@ -22,13 +24,23 @@ public class TcpProbeStrategy implements ProbeStrategy {
     // TODO: externalize in application.yml later
     private static final int DEFAULT_TIMEOUT_MS = 1000;
 
+    private final Supplier<Socket> socketSupplier;
+
+    public TcpProbeStrategy() {
+        this(Socket::new);
+    }
+
+    TcpProbeStrategy(Supplier<Socket> socketSupplier) {
+        this.socketSupplier = Objects.requireNonNull(socketSupplier, "socketSupplier");
+    }
+
     @Override
     public ProbeResult probe(ProbeRequest request) {
         Instant start = Instant.now();
         String host = request.host();
         int port = request.port();
 
-        try (Socket socket = new Socket()) {
+        try (Socket socket = socketSupplier.get()) {
             long beforeConnect = System.nanoTime();
             socket.connect(new InetSocketAddress(host, port), DEFAULT_TIMEOUT_MS);
             long afterConnect = System.nanoTime();

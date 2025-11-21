@@ -1,5 +1,6 @@
 package me.paulbaur.ict.probe.api;
 
+import me.paulbaur.ict.common.exception.NotFoundException;
 import me.paulbaur.ict.common.model.ErrorResponse;
 import me.paulbaur.ict.probe.api.dto.ProbeResultDto;
 import me.paulbaur.ict.probe.service.ProbeService;
@@ -59,11 +60,10 @@ public class ProbeController {
             )
     })
     @GetMapping("/probe-results/latest")
-    public ResponseEntity<?> latest() {
+    public ResponseEntity<ProbeResultDto> latest() {
         return probeService.getLatestResult()
-                .<ResponseEntity<?>>map(result -> ResponseEntity.ok(ProbeResultDto.fromDomain(result)))
-                .orElseGet(() -> ResponseEntity.status(404)
-                        .body(new ErrorResponse("No probe result available", "NOT_FOUND", Instant.now())));
+                .map(result -> ResponseEntity.ok(ProbeResultDto.fromDomain(result)))
+                .orElseThrow(() -> new NotFoundException("No probe result available"));
     }
 
     /**
@@ -91,16 +91,16 @@ public class ProbeController {
             )
     })
     @GetMapping("/probe/targets/{targetId}/recent")
-    public ResponseEntity<?> recent(
+    public ResponseEntity<List<ProbeResultDto>> recent(
             @Parameter(description = "Target ID (UUID)") @PathVariable String targetId,
             @Parameter(description = "Maximum number of results to return", example = "20")
             @RequestParam(defaultValue = "20") int limit
     ) {
-        if (targetId == null || targetId.isBlank()) {
-            return validationError("targetId is required");
+        if (!hasText(targetId)) {
+            throw new IllegalArgumentException("targetId is required");
         }
         if (!isValidLimit(limit)) {
-            return validationError("limit must be between 1 and " + MAX_LIMIT);
+            throw new IllegalArgumentException("limit must be between 1 and " + MAX_LIMIT);
         }
 
         List<ProbeResultDto> results = ProbeResultDto.fromDomainList(probeService.getRecentResultsForTarget(targetId, limit));
@@ -126,7 +126,7 @@ public class ProbeController {
             )
     })
     @GetMapping("/history")
-    public ResponseEntity<?> history(
+    public ResponseEntity<List<ProbeResultDto>> history(
             @Parameter(description = "Target ID (UUID)", required = true)
             @RequestParam(name = "targetId") String targetId,
             @Parameter(description = "Maximum number of results to return", example = "100")
@@ -136,29 +136,22 @@ public class ProbeController {
             @Parameter(description = "Inclusive end of the time range (ISO-8601)", example = "2025-11-19T12:00:00Z")
             @RequestParam(name = "end", required = false) String end
     ) {
-        if (targetId == null || targetId.isBlank()) {
-            return validationError("targetId is required");
+        if (!hasText(targetId)) {
+            throw new IllegalArgumentException("targetId is required");
         }
         if (!isValidLimit(limit)) {
-            return validationError("limit must be between 1 and " + MAX_LIMIT);
+            throw new IllegalArgumentException("limit must be between 1 and " + MAX_LIMIT);
         }
 
-        Instant startInstant = parseInstantOrNull("start", start);
-        if (startInstant == null && hasText(start)) {
-            return validationError("start must be an ISO-8601 timestamp");
-        }
-
-        Instant endInstant = parseInstantOrNull("end", end);
-        if (endInstant == null && hasText(end)) {
-            return validationError("end must be an ISO-8601 timestamp");
-        }
+        Instant startInstant = parseIsoInstant("start", start);
+        Instant endInstant = parseIsoInstant("end", end);
 
         if ((startInstant == null) != (endInstant == null)) {
-            return validationError("start and end must both be provided together");
+            throw new IllegalArgumentException("start and end must both be provided together");
         }
 
         if (startInstant != null && !startInstant.isBefore(endInstant)) {
-            return validationError("start must be before end");
+            throw new IllegalArgumentException("start must be before end");
         }
 
         List<ProbeResultDto> results = ProbeResultDto.fromDomainList(probeService.getHistoryForTarget(targetId, limit, startInstant, endInstant));
@@ -169,27 +162,18 @@ public class ProbeController {
         return limit > 0 && limit <= MAX_LIMIT;
     }
 
-    private Instant parseInstantOrNull(String paramName, String value) {
-        if (value == null) {
-            return null;
-        }
-        String trimmed = value.trim();
-        if (trimmed.isEmpty()) {
+    private Instant parseIsoInstant(String paramName, String value) {
+        if (!hasText(value)) {
             return null;
         }
         try {
-            return Instant.parse(trimmed);
+            return Instant.parse(value.trim());
         } catch (DateTimeParseException ex) {
-            return null;
+            throw new IllegalArgumentException(paramName + " must be an ISO-8601 timestamp");
         }
     }
 
     private boolean hasText(String value) {
         return value != null && !value.trim().isEmpty();
-    }
-
-    private ResponseEntity<ErrorResponse> validationError(String message) {
-        ErrorResponse error = new ErrorResponse(message, "VALIDATION_ERROR", Instant.now());
-        return ResponseEntity.badRequest().body(error);
     }
 }
