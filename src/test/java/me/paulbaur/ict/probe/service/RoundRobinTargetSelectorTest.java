@@ -1,7 +1,8 @@
 package me.paulbaur.ict.probe.service;
 
 import me.paulbaur.ict.target.domain.Target;
-import me.paulbaur.ict.target.service.TargetRepository;
+import me.paulbaur.ict.target.store.TargetRepository;
+
 import org.junit.jupiter.api.Test;
 
 import java.util.List;

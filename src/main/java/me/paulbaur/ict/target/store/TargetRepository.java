@@ -1,4 +1,4 @@
-package me.paulbaur.ict.target.service;
+package me.paulbaur.ict.target.store;
 
 import me.paulbaur.ict.target.domain.Target;
 import org.springframework.stereotype.Repository;

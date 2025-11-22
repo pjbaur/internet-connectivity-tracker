@@ -6,7 +6,8 @@ import me.paulbaur.ict.probe.domain.ProbeRequest;
 import me.paulbaur.ict.probe.domain.ProbeResult;
 import me.paulbaur.ict.probe.service.strategy.ProbeStrategy;
 import me.paulbaur.ict.target.domain.Target;
-import me.paulbaur.ict.target.service.TargetRepository;
+import me.paulbaur.ict.target.store.TargetRepository;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 

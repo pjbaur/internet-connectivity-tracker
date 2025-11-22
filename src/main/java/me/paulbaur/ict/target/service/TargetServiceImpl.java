@@ -1,6 +1,8 @@
 package me.paulbaur.ict.target.service;
 
 import me.paulbaur.ict.target.domain.Target;
+import me.paulbaur.ict.target.store.TargetRepository;
+
 import org.springframework.stereotype.Service;
 
 import java.util.List;

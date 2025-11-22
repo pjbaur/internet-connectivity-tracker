@@ -1,7 +1,7 @@
 package me.paulbaur.ict.target.store;
 
 import me.paulbaur.ict.target.domain.Target;
-import me.paulbaur.ict.target.service.TargetRepository;
+
 import org.springframework.stereotype.Repository;
 
 import java.util.*;
