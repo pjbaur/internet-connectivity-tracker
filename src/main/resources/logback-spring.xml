@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration scan="true">
     <springProperty scope="context" name="probeDebug" source="ict.probe.logging-debug" defaultValue="false"/>
+    <springProperty scope="context" name="logstashHost" source="ict.logstash.host" defaultValue="logstash"/>
+    <springProperty scope="context" name="logstashPort" source="ict.logstash.port" defaultValue="5044"/>
 
     <property name="LOG_PATTERN"
               value="%d{yyyy-MM-dd'T'HH:mm:ss.SSSX} %-5level [%thread] %logger{36} - %msg | reqId=%X{reqId:-} targetId=%X{targetId:-} probeId=%X{probeId:-} probeCycleId=%X{probeCycleId:-} seedRunId=%X{seedRunId:-}%n"/>
@@ -50,6 +52,40 @@
         </appender>
     </springProfile>
 
+    <springProfile name="json-logs">
+        <appender name="JSON_CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder class="net.logstash.logback.encoder.LoggingEventCompositeJsonEncoder">
+                <providers>
+                    <timestamp>
+                        <fieldName>@timestamp</fieldName>
+                    </timestamp>
+                    <pattern>
+                        <pattern>
+                            {
+                            "level": "%level",
+                            "thread": "%thread",
+                            "logger": "%logger{36}",
+                            "message": "%msg"
+                            }
+                        </pattern>
+                    </pattern>
+                    <mdc/>
+                    <arguments/>
+                    <stackTrace/>
+                </providers>
+            </encoder>
+        </appender>
+
+        <appender name="LOGSTASH" class="net.logstash.logback.appender.LogstashTcpSocketAppender">
+            <destination>${logstashHost}:${logstashPort}</destination>
+            <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+                <fieldNames>
+                    <timestamp>@timestamp</timestamp>
+                </fieldNames>
+            </encoder>
+        </appender>
+    </springProfile>
+
     <logger name="me.paulbaur.ict" level="INFO"/>
 
     <if condition='property("probeDebug").equalsIgnoreCase("true")'>
@@ -66,6 +102,7 @@
         <appender-ref ref="FILE"/>
         <springProfile name="json-logs">
             <appender-ref ref="JSON_CONSOLE"/>
+            <appender-ref ref="LOGSTASH"/>
         </springProfile>
     </root>
 </configuration>
