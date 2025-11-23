@@ -11,6 +11,9 @@ public record ProbeRequest(
         String host,
 
         @Schema(description = "Port number for the probe (e.g., 80 for HTTP)", example = "80")
-        int port
+        int port,
+
+        @Schema(description = "Identifier for the scheduler cycle that triggered this probe", example = "e8f0d94e-1c67-4a39-9d34-1c0fbf5b0e4c")
+        String probeCycleId
 ) {
 }

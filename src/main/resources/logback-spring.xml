@@ -3,7 +3,7 @@
     <springProperty scope="context" name="probeDebug" source="ict.probe.logging-debug" defaultValue="false"/>
 
     <property name="LOG_PATTERN"
-              value="%d{yyyy-MM-dd'T'HH:mm:ss.SSSX} %-5level [%thread] %logger{36} - %msg | reqId=%X{reqId:-} targetId=%X{targetId:-} probeId=%X{probeId:-}%n"/>
+              value="%d{yyyy-MM-dd'T'HH:mm:ss.SSSX} %-5level [%thread] %logger{36} - %msg | reqId=%X{reqId:-} targetId=%X{targetId:-} probeId=%X{probeId:-} probeCycleId=%X{probeCycleId:-} seedRunId=%X{seedRunId:-}%n"/>
     <property name="LOG_FILE" value="${LOG_FILE:-logs/ict.log}"/>
 
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">

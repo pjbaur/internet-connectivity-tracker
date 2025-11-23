@@ -43,6 +43,7 @@ class ProbeControllerIT {
                 "00000000-0000-0000-0000-000000000000",
                 "example.org",
                 23L,
+                "cycle-123",
                 ProbeStatus.UP,
                 ProbeMethod.TCP,
                 null
@@ -56,6 +57,7 @@ class ProbeControllerIT {
                 .andExpect(jsonPath("$.targetId").value("00000000-0000-0000-0000-000000000000"))
                 .andExpect(jsonPath("$.targetHost").value("example.org"))
                 .andExpect(jsonPath("$.latencyMs").value(23))
+                .andExpect(jsonPath("$.probeCycleId").value("cycle-123"))
                 .andExpect(jsonPath("$.status").value("UP"))
                 .andExpect(jsonPath("$.method").value("TCP"))
                 .andExpect(jsonPath("$.errorMessage").value(nullValue()));
@@ -77,8 +79,8 @@ class ProbeControllerIT {
     void recent_withValidParams_returnsResults() throws Exception {
         String targetId = "11111111-2222-3333-4444-555555555555";
         List<ProbeResult> results = List.of(
-                new ProbeResult(Instant.parse("2025-11-19T12:34:56Z"), targetId, "one.example", 10L, ProbeStatus.UP, ProbeMethod.TCP, null),
-                new ProbeResult(Instant.parse("2025-11-19T12:33:56Z"), targetId, "one.example", null, ProbeStatus.DOWN, ProbeMethod.TCP, "timeout")
+                new ProbeResult(Instant.parse("2025-11-19T12:34:56Z"), targetId, "one.example", 10L, "cycle-1", ProbeStatus.UP, ProbeMethod.TCP, null),
+                new ProbeResult(Instant.parse("2025-11-19T12:33:56Z"), targetId, "one.example", null, "cycle-1", ProbeStatus.DOWN, ProbeMethod.TCP, "timeout")
         );
         when(probeService.getRecentResultsForTarget(targetId, 2)).thenReturn(results);
 
@@ -87,8 +89,10 @@ class ProbeControllerIT {
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$", hasSize(2)))
                 .andExpect(jsonPath("$[0].timestamp").value("2025-11-19T12:34:56Z"))
+                .andExpect(jsonPath("$[0].probeCycleId").value("cycle-1"))
                 .andExpect(jsonPath("$[0].status").value("UP"))
                 .andExpect(jsonPath("$[1].status").value("DOWN"))
+                .andExpect(jsonPath("$[1].probeCycleId").value("cycle-1"))
                 .andExpect(jsonPath("$[1].errorMessage").value("timeout"));
 
         verify(probeService).getRecentResultsForTarget(targetId, 2);
@@ -136,7 +140,7 @@ class ProbeControllerIT {
         Instant start = Instant.parse("2025-11-19T10:00:00Z");
         Instant end = Instant.parse("2025-11-19T12:00:00Z");
         List<ProbeResult> results = List.of(
-                new ProbeResult(Instant.parse("2025-11-19T11:10:00Z"), targetId, "range.example", 42L, ProbeStatus.UP, ProbeMethod.TCP, null)
+                new ProbeResult(Instant.parse("2025-11-19T11:10:00Z"), targetId, "range.example", 42L, "cycle-5", ProbeStatus.UP, ProbeMethod.TCP, null)
         );
         when(probeService.getHistoryForTarget(targetId, 5, start, end)).thenReturn(results);
 
@@ -150,6 +154,7 @@ class ProbeControllerIT {
                 .andExpect(jsonPath("$", hasSize(1)))
                 .andExpect(jsonPath("$[0].timestamp").value("2025-11-19T11:10:00Z"))
                 .andExpect(jsonPath("$[0].targetHost").value("range.example"))
+                .andExpect(jsonPath("$[0].probeCycleId").value("cycle-5"))
                 .andExpect(jsonPath("$[0].status").value("UP"));
 
         verify(probeService).getHistoryForTarget(eq(targetId), eq(5), eq(start), eq(end));

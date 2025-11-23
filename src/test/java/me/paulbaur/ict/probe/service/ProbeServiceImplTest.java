@@ -50,23 +50,25 @@ class ProbeServiceImplTest {
     @Test
     void probe_whenStrategySucceeds_callsStrategyAndSavesResult() {
         // Arrange
-        ProbeResult successResult = new ProbeResult(Instant.now(), TEST_TARGET_ID.toString(), "example.com", 100L, ProbeStatus.UP, ProbeMethod.TCP, null);
+        ProbeResult successResult = new ProbeResult(Instant.now(), TEST_TARGET_ID.toString(), "example.com", 100L, "cycle-from-strategy", ProbeStatus.UP, ProbeMethod.TCP, null);
         probeStrategySpy.setNextResult(successResult);
 
         // Act
         ProbeResult result = probeService.probe(TEST_TARGET);
 
         // Assert
-        assertThat(result).isEqualTo(successResult);
+        assertThat(result.status()).isEqualTo(ProbeStatus.UP);
+        assertThat(result.probeCycleId()).isNotBlank();
 
         // Verify probeStrategy was called correctly
         assertThat(probeStrategySpy.getLastRequest()).isNotNull();
         assertThat(probeStrategySpy.getLastRequest().targetId()).isEqualTo(TEST_TARGET_ID.toString());
         assertThat(probeStrategySpy.getLastRequest().host()).isEqualTo("example.com");
+        assertThat(probeStrategySpy.getLastRequest().probeCycleId()).isEqualTo(result.probeCycleId());
 
         // Verify repository save was called
         assertThat(probeRepositoryStub.getSavedResults()).hasSize(1);
-        assertThat(probeRepositoryStub.getSavedResults().get(0)).isEqualTo(successResult);
+        assertThat(probeRepositoryStub.getSavedResults().get(0).probeCycleId()).isEqualTo(result.probeCycleId());
     }
 
     @Test
@@ -83,6 +85,7 @@ class ProbeServiceImplTest {
         assertThat(result.errorMessage()).isEqualTo("unexpected error: " + testException.getMessage());
         assertThat(result.latencyMs()).isNull();
         assertThat(result.targetId()).isEqualTo(TEST_TARGET_ID.toString());
+        assertThat(result.probeCycleId()).isNotBlank();
 
         // Verify repository save was called with the failure result
         assertThat(probeRepositoryStub.getSavedResults()).hasSize(1);
@@ -93,7 +96,7 @@ class ProbeServiceImplTest {
     void runScheduledProbes_whenTargetAvailable_probesTarget() {
         // Arrange
         targetSelectorStub.setNextTarget(TEST_TARGET);
-        ProbeResult successResult = new ProbeResult(Instant.now(), TEST_TARGET_ID.toString(), "example.com", 100L, ProbeStatus.UP, ProbeMethod.TCP, null);
+        ProbeResult successResult = new ProbeResult(Instant.now(), TEST_TARGET_ID.toString(), "example.com", 100L, "cycle-from-strategy", ProbeStatus.UP, ProbeMethod.TCP, null);
         probeStrategySpy.setNextResult(successResult);
 
         // Act
@@ -120,7 +123,7 @@ class ProbeServiceImplTest {
     @Test
     void getLatestResult_whenResultPresent_returnsResult() {
         // Arrange
-        ProbeResult latestResult = new ProbeResult(Instant.now(), TEST_TARGET_ID.toString(), "example.com", 50L, ProbeStatus.UP, ProbeMethod.TCP, null);
+        ProbeResult latestResult = new ProbeResult(Instant.now(), TEST_TARGET_ID.toString(), "example.com", 50L, "cycle-latest", ProbeStatus.UP, ProbeMethod.TCP, null);
         probeRepositoryStub.setNextLatestResult(latestResult);
 
         // Act

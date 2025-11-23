@@ -49,6 +49,7 @@ public class ElasticProbeRepository implements ProbeRepository {
                     kv("index", index),
                     kv("targetId", result.targetId()),
                     kv("host", result.targetHost()),
+                    kv("probeCycleId", result.probeCycleId()),
                     kv("timestamp", result.timestamp()),
                     ex
             );
