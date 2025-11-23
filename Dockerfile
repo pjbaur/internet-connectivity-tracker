@@ -2,19 +2,32 @@
 FROM maven:3.9.9-eclipse-temurin-21 AS build
 WORKDIR /app
 
+# Cache Maven dependencies first
 COPY pom.xml .
-RUN mvn -B -q dependency:go-offline
+RUN mvn -B -q -e -DskipTests dependency:go-offline --no-transfer-progress
 
+# Copy the rest of the source code
 COPY src ./src
-RUN mvn -B -q package -DskipTests
+
+# Build the JAR (reproducible, layered, fast)
+RUN mvn -B -q -e package -DskipTests --no-transfer-progress
 
 # === Runtime stage ===
-FROM eclipse-temurin:21-jre
+FROM eclipse-temurin:21-jre-alpine
+
 WORKDIR /app
 
-COPY --from=build /app/target/internet-connectivity-tracker-0.1.0-SNAPSHOT.jar app.jar
+# Copy the built application
+COPY --from=build /app/target/*.jar app.jar
 
-ENV JAVA_OPTS=""
+# Create a non-root user for security
+RUN addgroup -S spring && adduser -S spring -G spring
+USER spring
+
+# Helpful optimization (optional): smaller DNS cache
+ENV JAVA_OPTS="-Xms256m -Xmx256m"
+
 EXPOSE 8080
 
-ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
+# Use JSON array ENTRYPOINT (no shell needed)
+ENTRYPOINT ["java", "-jar", "app.jar"]
