@@ -4,8 +4,15 @@ Step-by-step instructions for building a latency-over-time and availability dash
 
 ## Prerequisites
 
-- Elasticsearch and Kibana are running (e.g., `docker compose up` from the repo root).
+- Elasticsearch, Kibana, and Logstash are running (e.g., `docker compose up` from the repo root). The compose file enables JSON logs and ships them to Logstash → Elasticsearch by default.
 - Probe data is indexed into `probe-results` with fields like `timestamp`, `targetHost`, `latencyMs`, `status`, and `method`.
+
+## Enable JSON application logs
+
+The `json-logs` Spring profile emits structured logs and streams them to Logstash:
+
+- `docker compose up` sets `SPRING_PROFILES_ACTIVE=json-logs` and sends logs to `logstash:5044`, which indexes them into `app-logs-*`.
+- To disable JSON shipping, remove `SPRING_PROFILES_ACTIVE=json-logs` (or set another profile) in `docker-compose.yml`. Text console/file logs remain.
 
 ## Create the data view (index pattern)
 
@@ -52,3 +59,10 @@ Step-by-step instructions for building a latency-over-time and availability dash
 1. Open **Stack Management → Saved Objects**.
 2. Select the items to export: the `probe-results` data view, both visualizations, and the dashboard.
 3. Click **Export** and choose NDJSON. Kibana downloads a `.ndjson` file that can be imported into another instance.
+
+## Provided saved objects (logs)
+
+Import `docs/kibana/ict-logs.ndjson` to get:
+- `ICT Logs – Recent`: saved search filtered by `targetId`, `status`, `method`, `reqId`, and `probeCycleId` columns.
+- `ICT Logs – Error Rate`: Lens visualization showing error/warn share over time.
+- `ICT Logs – Dashboard`: combines the saved search and error-rate chart.

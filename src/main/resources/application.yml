@@ -11,3 +11,6 @@ ict:
     port: 9200
     scheme: http
     index: probe-results
+  logstash:
+    host: logstash
+    port: 5044

@@ -40,18 +40,40 @@ services:
     networks:
       - ict-net
 
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.15.0
+    container_name: ict-logstash
+    environment:
+      - xpack.monitoring.enabled=false
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    volumes:
+      - ./docker/logstash/pipeline/logstash.conf:/usr/share/logstash/pipeline/logstash.conf:ro
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    ports:
+      - "5044:5044"
+    restart: unless-stopped
+    networks:
+      - ict-net
+
   app:
     build: .
     container_name: ict-app
     environment:
       - ICT_ELASTICSEARCH_HOST=elasticsearch
       - ICT_ELASTICSEARCH_PORT=9200
+      - ICT_LOGSTASH_HOST=logstash
+      - ICT_LOGSTASH_PORT=5044
+      - SPRING_PROFILES_ACTIVE=json-logs
       - JAVA_OPTS=-Xms512m -Xmx512m
     ports:
       - "8087:8080"
     depends_on:
       elasticsearch:
         condition: service_healthy
+      logstash:
+        condition: service_started
     restart: unless-stopped
     networks:
       - ict-net
