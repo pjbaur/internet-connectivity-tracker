@@ -50,31 +50,6 @@
                 </providers>
             </encoder>
         </appender>
-    </springProfile>
-
-    <springProfile name="json-logs">
-        <appender name="JSON_CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
-            <encoder class="net.logstash.logback.encoder.LoggingEventCompositeJsonEncoder">
-                <providers>
-                    <timestamp>
-                        <fieldName>@timestamp</fieldName>
-                    </timestamp>
-                    <pattern>
-                        <pattern>
-                            {
-                            "level": "%level",
-                            "thread": "%thread",
-                            "logger": "%logger{36}",
-                            "message": "%msg"
-                            }
-                        </pattern>
-                    </pattern>
-                    <mdc/>
-                    <arguments/>
-                    <stackTrace/>
-                </providers>
-            </encoder>
-        </appender>
 
         <appender name="LOGSTASH" class="net.logstash.logback.appender.LogstashTcpSocketAppender">
             <destination>${logstashHost}:${logstashPort}</destination>
@@ -100,9 +75,12 @@
     <root level="INFO">
         <appender-ref ref="CONSOLE"/>
         <appender-ref ref="FILE"/>
-        <springProfile name="json-logs">
+    </root>
+
+    <springProfile name="json-logs">
+        <root level="INFO">
             <appender-ref ref="JSON_CONSOLE"/>
             <appender-ref ref="LOGSTASH"/>
-        </springProfile>
-    </root>
+        </root>
+    </springProfile>
 </configuration>
