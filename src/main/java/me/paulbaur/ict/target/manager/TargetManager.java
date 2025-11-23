@@ -1,17 +1,25 @@
 package me.paulbaur.ict.target.manager;
 
+import lombok.extern.slf4j.Slf4j;
 import me.paulbaur.ict.target.domain.Target;
+import me.paulbaur.ict.target.seed.TargetDefinition;
+import me.paulbaur.ict.target.store.TargetRepository;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @Component
+@Slf4j
 public class TargetManager {
 
     private final Map<String, Target> targets = new LinkedHashMap<>();
     private final AtomicInteger currentIndex = new AtomicInteger(0);
+    private final TargetRepository targetRepository;
+
+    public TargetManager(TargetRepository targetRepository) {
+        this.targetRepository = Objects.requireNonNull(targetRepository, "targetRepository must not be null");
+    }
 
     public synchronized List<Target> listTargets() {
         return new ArrayList<>(targets.values());
@@ -74,5 +82,57 @@ public class TargetManager {
         }
 
         return Optional.of(currentTargets.get(index % size));
+    }
+
+    /**
+     * Seed targets into the repository, ensuring host/port uniqueness.
+     */
+    public void initializeFromSeeds(List<TargetDefinition> seeds) {
+        if (seeds == null || seeds.isEmpty()) {
+            log.info("No target seeds provided; skipping initialization");
+            return;
+        }
+
+        Map<String, Target> existingByKey = new HashMap<>();
+        targetRepository.findAll().forEach(target ->
+                existingByKey.put(targetKey(target.getHost(), target.getPort()), target)
+        );
+
+        for (TargetDefinition seed : seeds) {
+            if (seed == null) {
+                log.warn("Encountered null seed entry; skipping");
+                continue;
+            }
+
+            String host = seed.host();
+            Integer port = seed.port();
+
+            if (host == null || host.isBlank()) {
+                log.warn("Skipping seed with missing host");
+                continue;
+            }
+            if (port == null || port <= 0) {
+                log.warn("Skipping seed with invalid port for host {}", host);
+                continue;
+            }
+
+            String key = targetKey(host, port);
+            if (existingByKey.containsKey(key)) {
+                log.info("Target already exists; skipping seed {}", Map.of("host", host, "port", port));
+                continue;
+            }
+
+            String label = seed.label() != null ? seed.label() : host;
+            Target newTarget = new Target(UUID.randomUUID(), label, host, port);
+            targetRepository.save(newTarget);
+            addTarget(newTarget);
+            existingByKey.put(key, newTarget);
+
+            log.info("Seeding target: {}", Map.of("host", host, "port", port));
+        }
+    }
+
+    private String targetKey(String host, int port) {
+        return host.toLowerCase(Locale.ROOT) + ":" + port;
     }
 }
