@@ -19,3 +19,8 @@ Although this is a personal project, this guide documents development workflow f
 - Follow standard Java formatting  
 - Use meaningful names and comments  
 - Ensure tests pass before commit  
+
+## Code Review Checklist
+- Confirm new or changed logging follows `docs/LOGGING_STYLE_GUIDE.md` (structured key/value, context keys, level choice, single exception log).  
+- Add or update log-capturing tests when logging behavior changes.  
+- Validate configuration/documentation updates alongside code so defaults remain safe.  

@@ -23,6 +23,9 @@ public record ProbeResultDto(
         @Schema(description = "Measured round-trip latency in milliseconds; null if probe failed", example = "23")
         Long latencyMs,
 
+        @Schema(description = "Identifier for the scheduler cycle that produced this result", example = "e8f0d94e-1c67-4a39-9d34-1c0fbf5b0e4c")
+        String probeCycleId,
+
         @Schema(description = "Result status of the probe (UP or DOWN)", implementation = ProbeStatus.class)
         ProbeStatus status,
 
@@ -40,6 +43,7 @@ public record ProbeResultDto(
                 result.targetId(),
                 result.targetHost(),
                 result.latencyMs(),
+                result.probeCycleId(),
                 result.status(),
                 result.method(),
                 result.errorMessage()

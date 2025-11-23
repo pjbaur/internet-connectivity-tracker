@@ -5,8 +5,12 @@ spring:
 ict:
   probe:
     interval-ms: 1000       # 1 second default
+    logging-debug: false    # enable DEBUG logs for probe subpackage when true
   elasticsearch:
     host: elasticsearch
     port: 9200
     scheme: http
     index: probe-results
+  logstash:
+    host: logstash
+    port: 5044

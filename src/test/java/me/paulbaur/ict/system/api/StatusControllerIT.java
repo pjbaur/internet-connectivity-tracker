@@ -55,6 +55,7 @@ class StatusControllerIT {
                 downId.toString(),
                 downTarget.getHost(),
                 125L,
+                "cycle-10",
                 ProbeStatus.DOWN,
                 ProbeMethod.TCP,
                 "connection refused"

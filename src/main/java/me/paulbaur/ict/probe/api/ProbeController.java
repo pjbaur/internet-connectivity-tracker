@@ -50,7 +50,7 @@ public class ProbeController {
             @ApiResponse(responseCode = "200", description = "Latest probe result",
                     content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
                             schema = @Schema(implementation = ProbeResultDto.class),
-                            examples = {@ExampleObject(name = "latest", value = "{\"timestamp\":\"2025-11-19T12:34:56Z\",\"targetId\":\"00000000-0000-0000-0000-000000000000\",\"targetHost\":\"example.org\",\"latencyMs\":23,\"status\":\"UP\",\"method\":\"TCP\",\"errorMessage\":null}")})
+                            examples = {@ExampleObject(name = "latest", value = "{\"timestamp\":\"2025-11-19T12:34:56Z\",\"targetId\":\"00000000-0000-0000-0000-000000000000\",\"targetHost\":\"example.org\",\"latencyMs\":23,\"probeCycleId\":\"e8f0d94e-1c67-4a39-9d34-1c0fbf5b0e4c\",\"status\":\"UP\",\"method\":\"TCP\",\"errorMessage\":null}")})
             ),
             @ApiResponse(responseCode = "404", description = "No probe result available",
                     content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))
@@ -80,7 +80,7 @@ public class ProbeController {
             @ApiResponse(responseCode = "200", description = "A list of recent probe results",
                     content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
                             array = @ArraySchema(schema = @Schema(implementation = ProbeResultDto.class)),
-                            examples = {@ExampleObject(name = "recent", value = "[{\"timestamp\":\"2025-11-19T12:34:56Z\",\"targetId\":\"00000000-0000-0000-0000-000000000000\",\"targetHost\":\"example.org\",\"latencyMs\":23,\"status\":\"UP\",\"method\":\"TCP\",\"errorMessage\":null}]")}
+                            examples = {@ExampleObject(name = "recent", value = "[{\"timestamp\":\"2025-11-19T12:34:56Z\",\"targetId\":\"00000000-0000-0000-0000-000000000000\",\"targetHost\":\"example.org\",\"latencyMs\":23,\"probeCycleId\":\"e8f0d94e-1c67-4a39-9d34-1c0fbf5b0e4c\",\"status\":\"UP\",\"method\":\"TCP\",\"errorMessage\":null}]")}
                     )
             ),
             @ApiResponse(responseCode = "400", description = "Bad request - invalid parameters",
@@ -115,7 +115,7 @@ public class ProbeController {
             @ApiResponse(responseCode = "200", description = "Historical probe results",
                     content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
                             array = @ArraySchema(schema = @Schema(implementation = ProbeResultDto.class)),
-                            examples = {@ExampleObject(name = "history", value = "[{\"timestamp\":\"2025-11-19T12:34:56Z\",\"targetId\":\"00000000-0000-0000-0000-000000000000\",\"targetHost\":\"example.org\",\"latencyMs\":45,\"status\":\"UP\",\"method\":\"TCP\",\"errorMessage\":null}]")}
+                            examples = {@ExampleObject(name = "history", value = "[{\"timestamp\":\"2025-11-19T12:34:56Z\",\"targetId\":\"00000000-0000-0000-0000-000000000000\",\"targetHost\":\"example.org\",\"latencyMs\":45,\"probeCycleId\":\"e8f0d94e-1c67-4a39-9d34-1c0fbf5b0e4c\",\"status\":\"UP\",\"method\":\"TCP\",\"errorMessage\":null}]")}
                     )
             ),
             @ApiResponse(responseCode = "400", description = "Invalid request parameters",

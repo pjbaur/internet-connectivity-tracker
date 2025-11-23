@@ -30,7 +30,7 @@ import static org.assertj.core.api.Assertions.assertThat;
         "spring.task.scheduling.enabled=false",
         "spring.main.allow-bean-definition-overriding=true"
 })
-@Testcontainers
+@Testcontainers(disabledWithoutDocker = true)
 @Import(TargetSeedIntegrationTest.PostgresTargetRepositoryConfig.class)
 class TargetSeedIntegrationTest {
 

@@ -24,7 +24,8 @@ class TcpProbeStrategyTest {
     @Timeout(2)
     void probe_whenConnectionSucceeds_returnsUp() {
         TcpProbeStrategy strategy = new TcpProbeStrategy(SuccessSocket::new);
-        ProbeRequest request = new ProbeRequest(UUID.randomUUID().toString(), "1.1.1.1", 53);
+        String probeCycleId = UUID.randomUUID().toString();
+        ProbeRequest request = new ProbeRequest(UUID.randomUUID().toString(), "1.1.1.1", 53, probeCycleId);
 
         ProbeResult result = strategy.probe(request);
 
@@ -35,13 +36,14 @@ class TcpProbeStrategyTest {
         assertThat(result.targetId()).isEqualTo(request.targetId());
         assertThat(result.targetHost()).isEqualTo(request.host());
         assertThat(result.timestamp()).isNotNull();
+        assertThat(result.probeCycleId()).isEqualTo(probeCycleId);
     }
 
     @Test
     @Timeout(2)
     void probe_whenConnectionTimesOut_returnsDown() {
         TcpProbeStrategy strategy = new TcpProbeStrategy(TimeoutSocket::new);
-        ProbeRequest request = new ProbeRequest(UUID.randomUUID().toString(), "192.168.2.1", 80);
+        ProbeRequest request = new ProbeRequest(UUID.randomUUID().toString(), "192.168.2.1", 80, UUID.randomUUID().toString());
 
         ProbeResult result = strategy.probe(request);
 
@@ -55,7 +57,7 @@ class TcpProbeStrategyTest {
     @Timeout(2)
     void probe_whenConnectionIsRefused_returnsDown() {
         TcpProbeStrategy strategy = new TcpProbeStrategy(ConnectionRefusedSocket::new);
-        ProbeRequest request = new ProbeRequest(UUID.randomUUID().toString(), "localhost", 1);
+        ProbeRequest request = new ProbeRequest(UUID.randomUUID().toString(), "localhost", 1, UUID.randomUUID().toString());
 
         ProbeResult result = strategy.probe(request);
 
@@ -70,7 +72,7 @@ class TcpProbeStrategyTest {
     void probe_whenHostIsUnknown_returnsDown() {
         TcpProbeStrategy strategy = new TcpProbeStrategy(UnknownHostSocket::new);
         String nonExistentHost = "test-" + UUID.randomUUID().toString() + ".invalid";
-        ProbeRequest request = new ProbeRequest(UUID.randomUUID().toString(), nonExistentHost, 80);
+        ProbeRequest request = new ProbeRequest(UUID.randomUUID().toString(), nonExistentHost, 80, UUID.randomUUID().toString());
 
         ProbeResult result = strategy.probe(request);
 

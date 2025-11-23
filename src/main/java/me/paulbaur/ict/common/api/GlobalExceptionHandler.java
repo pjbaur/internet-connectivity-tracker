@@ -1,5 +1,6 @@
 package me.paulbaur.ict.common.api;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import me.paulbaur.ict.common.exception.NotFoundException;
@@ -18,56 +19,83 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import java.time.Instant;
 import java.util.stream.Collectors;
 
+import static net.logstash.logback.argument.StructuredArguments.kv;
+
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler(NotFoundException.class)
-    public ResponseEntity<ErrorResponse> handleNotFound(NotFoundException ex) {
-        return buildError(ex.getMessage(), "NOT_FOUND", HttpStatus.NOT_FOUND);
+    public ResponseEntity<ErrorResponse> handleNotFound(NotFoundException ex, HttpServletRequest request) {
+        String message = ex.getMessage();
+        log.warn(
+                "Resource not found",
+                kv("errorCode", "NOT_FOUND"),
+                kv("status", HttpStatus.NOT_FOUND.value()),
+                kv("message", message),
+                kv("path", request.getRequestURI())
+        );
+        return buildError(message, "NOT_FOUND", HttpStatus.NOT_FOUND);
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<ErrorResponse> handleIllegalArgument(IllegalArgumentException ex) {
-        return buildError(ex.getMessage(), "VALIDATION_ERROR", HttpStatus.BAD_REQUEST);
+    public ResponseEntity<ErrorResponse> handleIllegalArgument(IllegalArgumentException ex, HttpServletRequest request) {
+        return buildValidationError(ex.getMessage(), request);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ErrorResponse> handleMethodArgumentNotValid(MethodArgumentNotValidException ex) {
+    public ResponseEntity<ErrorResponse> handleMethodArgumentNotValid(MethodArgumentNotValidException ex, HttpServletRequest request) {
         String message = ex.getBindingResult()
                 .getFieldErrors()
                 .stream()
                 .map(GlobalExceptionHandler::formatFieldError)
                 .findFirst()
                 .orElse("Request validation failed");
-        return buildError(message, "VALIDATION_ERROR", HttpStatus.BAD_REQUEST);
+        return buildValidationError(message, request);
     }
 
     @ExceptionHandler(ConstraintViolationException.class)
-    public ResponseEntity<ErrorResponse> handleConstraintViolation(ConstraintViolationException ex) {
+    public ResponseEntity<ErrorResponse> handleConstraintViolation(ConstraintViolationException ex, HttpServletRequest request) {
         String message = ex.getConstraintViolations()
                 .stream()
                 .map(ConstraintViolation::getMessage)
                 .collect(Collectors.joining("; "));
-        return buildError(message.isBlank() ? "Request validation failed" : message, "VALIDATION_ERROR", HttpStatus.BAD_REQUEST);
+        return buildValidationError(message.isBlank() ? "Request validation failed" : message, request);
     }
 
     @ExceptionHandler(MissingServletRequestParameterException.class)
-    public ResponseEntity<ErrorResponse> handleMissingParameter(MissingServletRequestParameterException ex) {
+    public ResponseEntity<ErrorResponse> handleMissingParameter(MissingServletRequestParameterException ex, HttpServletRequest request) {
         String message = "%s parameter is required".formatted(ex.getParameterName());
-        return buildError(message, "VALIDATION_ERROR", HttpStatus.BAD_REQUEST);
+        return buildValidationError(message, request);
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
-    public ResponseEntity<ErrorResponse> handleUnreadableMessage(HttpMessageNotReadableException ex) {
-        return buildError("Malformed JSON request", "VALIDATION_ERROR", HttpStatus.BAD_REQUEST);
+    public ResponseEntity<ErrorResponse> handleUnreadableMessage(HttpMessageNotReadableException ex, HttpServletRequest request) {
+        return buildValidationError("Malformed JSON request", request);
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ErrorResponse> handleGenericException(Exception ex) {
-        log.error("Unhandled exception", ex);
+    public ResponseEntity<ErrorResponse> handleGenericException(Exception ex, HttpServletRequest request) {
+        log.error(
+                "Unhandled exception",
+                kv("status", HttpStatus.INTERNAL_SERVER_ERROR.value()),
+                kv("path", request.getRequestURI()),
+                kv("exception", ex.getClass().getSimpleName()),
+                ex
+        );
         return buildError("Unexpected error", "INTERNAL_ERROR", HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    private ResponseEntity<ErrorResponse> buildValidationError(String message, HttpServletRequest request) {
+        log.warn(
+                "Request validation failed",
+                kv("errorCode", "VALIDATION_ERROR"),
+                kv("status", HttpStatus.BAD_REQUEST.value()),
+                kv("message", message),
+                kv("path", request.getRequestURI())
+        );
+        return buildError(message, "VALIDATION_ERROR", HttpStatus.BAD_REQUEST);
     }
 
     private static ResponseEntity<ErrorResponse> buildError(String message, String code, HttpStatus status) {

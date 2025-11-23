@@ -6,6 +6,8 @@ import me.paulbaur.ict.target.seed.TargetDefinition;
 import me.paulbaur.ict.target.store.TargetRepository;
 import org.springframework.stereotype.Component;
 
+import static net.logstash.logback.argument.StructuredArguments.kv;
+
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -118,7 +120,13 @@ public class TargetManager {
 
             String key = targetKey(host, port);
             if (existingByKey.containsKey(key)) {
-                log.info("Target already exists; skipping seed {}", Map.of("host", host, "port", port));
+                log.info(
+                        "Target already exists; skipping seed host={} port={}",
+                        host,
+                        port,
+                        kv("host", host),
+                        kv("port", port)
+                );
                 continue;
             }
 
@@ -128,7 +136,13 @@ public class TargetManager {
             addTarget(newTarget);
             existingByKey.put(key, newTarget);
 
-            log.info("Seeding target: {}", Map.of("host", host, "port", port));
+            log.info(
+                    "Seeding target host={} port={}",
+                    host,
+                    port,
+                    kv("host", host),
+                    kv("port", port)
+            );
         }
     }
 
