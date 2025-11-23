@@ -3,6 +3,7 @@ package me.paulbaur.ict.probe.service.strategy;
 import lombok.extern.slf4j.Slf4j;
 import me.paulbaur.ict.common.model.ProbeMethod;
 import me.paulbaur.ict.common.model.ProbeStatus;
+import me.paulbaur.ict.common.logging.LogRateLimiter;
 import me.paulbaur.ict.probe.domain.ProbeRequest;
 import me.paulbaur.ict.probe.domain.ProbeResult;
 import org.springframework.stereotype.Component;
@@ -16,6 +17,7 @@ import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.time.Instant;
+import java.time.Duration;
 import java.util.Objects;
 import java.util.function.Supplier;
 
@@ -25,6 +27,9 @@ public class TcpProbeStrategy implements ProbeStrategy {
 
     // TODO: externalize in application.yml later
     private static final int DEFAULT_TIMEOUT_MS = 1000;
+    private static final Duration CONNECTION_REFUSED_LOG_INTERVAL = Duration.ofSeconds(30);
+    private static final LogRateLimiter connectionRefusedLimiter =
+            new LogRateLimiter(CONNECTION_REFUSED_LOG_INTERVAL);
 
     private final Supplier<Socket> socketSupplier;
 
@@ -84,16 +89,36 @@ public class TcpProbeStrategy implements ProbeStrategy {
             );
             return createFailureResult(start, request, "connection timed out");
         } catch (ConnectException e) {
-            log.warn(
-                    "TCP probe connection refused",
-                    kv("targetId", request.targetId()),
-                    kv("host", host),
-                    kv("port", port),
-                    kv("status", ProbeStatus.DOWN),
-                    kv("method", ProbeMethod.TCP),
-                    kv("probeCycleId", probeCycleId),
-                    kv("error", e.getMessage())
-            );
+            String limiterKey = host + ":" + port;
+            boolean shouldLog = connectionRefusedLimiter.shouldLog(limiterKey);
+
+            if (shouldLog) {
+                log.warn(
+                        "TCP probe connection refused",
+                        kv("targetId", request.targetId()),
+                        kv("host", host),
+                        kv("port", port),
+                        kv("status", ProbeStatus.DOWN),
+                        kv("method", ProbeMethod.TCP),
+                        kv("probeCycleId", probeCycleId),
+                        kv("error", e.getMessage()),
+                        kv("rateLimited", false),
+                        kv("rateLimitWindowSec", CONNECTION_REFUSED_LOG_INTERVAL.toSeconds())
+                );
+            } else {
+                log.debug(
+                        "TCP probe connection refused (suppressed by rate limit)",
+                        kv("targetId", request.targetId()),
+                        kv("host", host),
+                        kv("port", port),
+                        kv("status", ProbeStatus.DOWN),
+                        kv("method", ProbeMethod.TCP),
+                        kv("probeCycleId", probeCycleId),
+                        kv("error", e.getMessage()),
+                        kv("rateLimited", true)
+                );
+            }
+
             return createFailureResult(start, request, "connection refused");
         } catch (UnknownHostException e) {
             log.warn(

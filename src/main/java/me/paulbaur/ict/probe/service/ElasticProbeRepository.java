@@ -9,11 +9,8 @@ import co.elastic.clients.elasticsearch.core.SearchResponse;
 import co.elastic.clients.json.JsonData;
 
 import me.paulbaur.ict.probe.domain.ProbeResult;
-import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Repository;
-
-import static net.logstash.logback.argument.StructuredArguments.kv;
 
 import java.time.Instant;
 import java.util.List;
@@ -21,8 +18,6 @@ import java.util.Optional;
 
 @Repository
 public class ElasticProbeRepository implements ProbeRepository {
-
-    private static final Logger log = org.slf4j.LoggerFactory.getLogger(ElasticProbeRepository.class);
 
     private final ElasticsearchClient client;
     private final String index;
@@ -44,15 +39,6 @@ public class ElasticProbeRepository implements ProbeRepository {
 
             client.index(req);
         } catch (Exception ex) {
-            log.error(
-                    "Failed to index probe result",
-                    kv("index", index),
-                    kv("targetId", result.targetId()),
-                    kv("host", result.targetHost()),
-                    kv("probeCycleId", result.probeCycleId()),
-                    kv("timestamp", result.timestamp()),
-                    ex
-            );
             // Wrap lower-level exception in repository-specific unchecked exception
             throw new ProbeRepositoryException("Failed to index probe result for target " + result.targetId(), ex);
         }
@@ -97,13 +83,6 @@ public class ElasticProbeRepository implements ProbeRepository {
             return extractHits(response);
 
         } catch (Exception ex) {
-            log.error(
-                    "Failed to fetch recent probe results",
-                    kv("index", index),
-                    kv("targetId", targetId),
-                    kv("limit", limit),
-                    ex
-            );
             throw new ProbeRepositoryException("Failed to fetch recent probe results for target " + targetId, ex);
         }
     }
@@ -155,14 +134,6 @@ public class ElasticProbeRepository implements ProbeRepository {
             return extractHits(response);
 
         } catch (Exception ex) {
-            log.error(
-                    "Failed to fetch probe history",
-                    kv("index", index),
-                    kv("targetId", targetId),
-                    kv("rangeStart", start),
-                    kv("rangeEnd", end),
-                    ex
-            );
             throw new ProbeRepositoryException("Failed to fetch history for target " + targetId + " between " + start + " - " + end, ex);
         }
     }
@@ -183,7 +154,6 @@ public class ElasticProbeRepository implements ProbeRepository {
             return extractFirst(response);
 
         } catch (Exception ex) {
-            log.error("Failed to fetch latest probe result", kv("index", index), ex);
             throw new ProbeRepositoryException("Failed to fetch latest probe result", ex);
         }
     }
