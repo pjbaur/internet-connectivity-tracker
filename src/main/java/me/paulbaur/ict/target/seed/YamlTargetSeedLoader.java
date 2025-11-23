@@ -6,6 +6,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 
+import static net.logstash.logback.argument.StructuredArguments.kv;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
@@ -50,9 +52,23 @@ public class YamlTargetSeedLoader implements TargetSeedLoader {
             int schemaVersion = properties.schemaVersion();
 
             if (targets.isEmpty()) {
-                log.warn("Seed file '{}' is present but contains no targets", resourcePath);
+                log.warn(
+                        "Seed file '{}' is present but contains no targets (schemaVersion={})",
+                        resourcePath,
+                        schemaVersion,
+                        kv("resourcePath", resourcePath),
+                        kv("schemaVersion", schemaVersion)
+                );
             } else {
-                log.info("Loaded {} target seeds (schemaVersion={}) from {}", targets.size(), schemaVersion, resourcePath);
+                log.info(
+                        "Loaded target seeds from {} (schemaVersion={}, count={})",
+                        resourcePath,
+                        schemaVersion,
+                        targets.size(),
+                        kv("resourcePath", resourcePath),
+                        kv("schemaVersion", schemaVersion),
+                        kv("count", targets.size())
+                );
             }
 
             return targets;

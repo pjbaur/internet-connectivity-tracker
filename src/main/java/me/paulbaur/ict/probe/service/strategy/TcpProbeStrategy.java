@@ -7,6 +7,8 @@ import me.paulbaur.ict.probe.domain.ProbeRequest;
 import me.paulbaur.ict.probe.domain.ProbeResult;
 import org.springframework.stereotype.Component;
 
+import static net.logstash.logback.argument.StructuredArguments.kv;
+
 import java.io.IOException;
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
@@ -47,7 +49,15 @@ public class TcpProbeStrategy implements ProbeStrategy {
 
             long latencyMs = (afterConnect - beforeConnect) / 1_000_000;
 
-            log.debug("TCP probe succeeded for target '{}' ({}:{}) in {} ms", request.targetId(), host, port, latencyMs);
+            log.debug(
+                    "TCP probe succeeded",
+                    kv("targetId", request.targetId()),
+                    kv("host", host),
+                    kv("port", port),
+                    kv("latencyMs", latencyMs),
+                    kv("status", ProbeStatus.UP),
+                    kv("method", ProbeMethod.TCP)
+            );
 
             return new ProbeResult(
                     start,
@@ -59,16 +69,48 @@ public class TcpProbeStrategy implements ProbeStrategy {
                     null
             );
         } catch (SocketTimeoutException e) {
-            log.warn("TCP probe timed out for target '{}' ({}:{}): {}", request.targetId(), host, port, e.getMessage());
+            log.warn(
+                    "TCP probe timed out",
+                    kv("targetId", request.targetId()),
+                    kv("host", host),
+                    kv("port", port),
+                    kv("status", ProbeStatus.DOWN),
+                    kv("method", ProbeMethod.TCP),
+                    kv("error", e.getMessage())
+            );
             return createFailureResult(start, request, "connection timed out");
         } catch (ConnectException e) {
-            log.warn("TCP probe connection refused for target '{}' ({}:{}): {}", request.targetId(), host, port, e.getMessage());
+            log.warn(
+                    "TCP probe connection refused",
+                    kv("targetId", request.targetId()),
+                    kv("host", host),
+                    kv("port", port),
+                    kv("status", ProbeStatus.DOWN),
+                    kv("method", ProbeMethod.TCP),
+                    kv("error", e.getMessage())
+            );
             return createFailureResult(start, request, "connection refused");
         } catch (UnknownHostException e) {
-            log.warn("TCP probe failed for target '{}' ({}:{}): unknown host", request.targetId(), host, port);
+            log.warn(
+                    "TCP probe failed: unknown host",
+                    kv("targetId", request.targetId()),
+                    kv("host", host),
+                    kv("port", port),
+                    kv("status", ProbeStatus.DOWN),
+                    kv("method", ProbeMethod.TCP),
+                    kv("error", "unknown host")
+            );
             return createFailureResult(start, request, "unknown host");
         } catch (IOException e) {
-            log.warn("TCP probe I/O error for target '{}' ({}:{}): {}", request.targetId(), host, port, e.getMessage());
+            log.warn(
+                    "TCP probe I/O error",
+                    kv("targetId", request.targetId()),
+                    kv("host", host),
+                    kv("port", port),
+                    kv("status", ProbeStatus.DOWN),
+                    kv("method", ProbeMethod.TCP),
+                    kv("error", e.getMessage())
+            );
             return createFailureResult(start, request, "I/O error: " + e.getMessage());
         }
     }

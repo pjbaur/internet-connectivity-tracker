@@ -193,9 +193,9 @@ class TargetManagerTest {
         assertTrue(savedTargets.stream().anyMatch(t -> t.getHost().equals("seed.example.com") && t.getPort() == 443));
 
         assertThat(output.getOut())
-                .contains("Seeding target: {port=443, host=seed.example.com}")
-                .contains("Target already exists; skipping seed {port=80, host=host1}")
-                .contains("Target already exists; skipping seed {port=443, host=seed.example.com}");
+                .contains("Seeding target host=seed.example.com port=443")
+                .contains("Target already exists; skipping seed host=host1 port=80")
+                .contains("Target already exists; skipping seed host=seed.example.com port=443");
     }
 
     @Test
