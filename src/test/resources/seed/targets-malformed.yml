@@ -1,0 +1,5 @@
+schemaVersion: "not-a-number"
+targets:
+  - label: "Broken entry"
+    host: "broken.example.com"
+    port: not-a-number

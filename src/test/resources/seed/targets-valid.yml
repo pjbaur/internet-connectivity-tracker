@@ -1,0 +1,9 @@
+schemaVersion: 1
+targets:
+  - label: "Seed One"
+    host: "one.example.com"
+    port: 80
+    method: "TCP"
+  - label: "Seed Two"
+    host: "two.example.com"
+    port: 53

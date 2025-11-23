@@ -138,6 +138,13 @@ flowchart TD
   * filtered history
   * uptime/latency visualizations
 
+### **Startup Target Seeding**
+
+* `YamlTargetSeedLoader` loads `targets.yml` from the classpath at startup (overridable via Spring config locations).
+* `TargetManager.initializeFromSeeds(...)` validates each seed (host + port required) and inserts only missing targets for idempotency.
+* Fail-fast on malformed YAML, but skip-and-log invalid seed rows.
+* `schemaVersion` in the YAML is reserved for future schema migrations or metadata changes.
+
 ---
 
 ## 4. Data Flow

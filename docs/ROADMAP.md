@@ -89,6 +89,18 @@ This roadmap outlines functional milestones **and** the integration of **AI-assi
 
 # **Future Milestones (Post-v0.3.0)**
 
+### **Phase 2 — External Target File Override**
+
+* Allow overriding bundled `targets.yml` via an external path (e.g., `ICT_TARGETS_FILE=/etc/ict/targets.yml` or Spring additional config locations).
+* Include validation + fail-fast behavior for unreadable/malformed files.
+* Document operational guidance for containerized deployments (volume mount pattern).
+
+### **Phase 3 — Live Reloading / Hot Reconfiguration**
+
+* Watch the external targets file for changes and hot-reload seeds without restarts.
+* Provide safe reloading semantics (idempotent, validation-first, partial failures logged).
+* Expose an operational endpoint or actuator hook for manual reload triggers.
+
 ### **Phase 4 — ICMP + Hybrid Probing**
 
 * ICMP probe strategy (cross-platform)

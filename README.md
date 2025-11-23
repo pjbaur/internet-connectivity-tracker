@@ -12,6 +12,7 @@ A Java 21 + Spring Boot application that monitors internet connectivity using OS
 * Elasticsearch storage and querying
 * Dockerized application
 * GitHub Actions CI pipeline
+* Startup target seeding from `targets.yml` (idempotent)
 * Optional Prometheus metrics (future milestone)
 
 ---
@@ -37,6 +38,27 @@ Documentation lives in the `/docs` directory:
 * `ROADMAP.md`
 * `API_SPEC.md`
 * `TEST_PLAN.md`
+
+---
+
+## Target Seeding
+
+At startup the app seeds probe targets from `src/main/resources/targets.yml`:
+
+```yaml
+schemaVersion: 1
+targets:
+  - label: "Cloudflare DNS"
+    host: "1.1.1.1"
+    port: 443
+    method: "TCP"          # optional in MVP
+```
+
+Rules:
+- `host` and `port` are required; `label` and `method` are optional in MVP.
+- Seeding is idempotent (existing host+port pairs are left untouched).
+- Malformed YAML fails fast; invalid rows are skipped with warnings.
+- The file can be overridden using Spring’s additional config locations (e.g., `--spring.config.additional-location=file:/etc/ict/targets.yml`).
 
 ---
 

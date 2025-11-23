@@ -76,6 +76,26 @@ Deletes a target by ID.
 
 ---
 
+## **Target Seeding (targets.yml)**
+
+At application startup, targets are **seeded from** `src/main/resources/targets.yml` (bundled in the JAR, overridable via Spring’s additional locations). The file schema:
+
+```yaml
+schemaVersion: 1
+targets:
+  - label: "Cloudflare DNS"
+    host: "1.1.1.1"
+    port: 443
+    method: "TCP"          # optional in MVP
+    intervalSeconds: 60    # optional (future)
+```
+
+**Rules**
+- `host` and `port` required; `label` and `method` optional in MVP.
+- Idempotent: existing targets (host+port) are left unchanged.
+- Invalid entries are skipped with warnings; malformed YAML fails fast with a clear error.
+- `schemaVersion` reserved for future schema changes.
+
 ## **GET /api/history**
 
 (Deprecated for MVP)

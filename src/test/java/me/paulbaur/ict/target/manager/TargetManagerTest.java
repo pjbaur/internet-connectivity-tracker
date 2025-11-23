@@ -1,23 +1,32 @@
 package me.paulbaur.ict.target.manager;
 
 import me.paulbaur.ict.target.domain.Target;
-import me.paulbaur.ict.target.manager.TargetManager;
+import me.paulbaur.ict.target.seed.TargetDefinition;
+import me.paulbaur.ict.target.store.TargetRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 
+@ExtendWith(OutputCaptureExtension.class)
 class TargetManagerTest {
 
     private TargetManager targetManager;
+    private TargetRepositoryStub targetRepositoryStub;
 
     @BeforeEach
     void setUp() {
-        targetManager = new TargetManager();
+        targetRepositoryStub = new TargetRepositoryStub();
+        targetManager = new TargetManager(targetRepositoryStub);
     }
 
     @Test
@@ -133,5 +142,100 @@ class TargetManagerTest {
         targetManager.removeTarget(target1.getId().toString());
         assertEquals(target2, targetManager.nextTargetRoundRobin().get());
         assertEquals(target2, targetManager.nextTargetRoundRobin().get()); // Only target2 left
+    }
+
+    @Test
+    void initializeFromSeeds_createsMissingTargetsAndSkipsExisting() {
+        Target existing = new Target(UUID.randomUUID(), "Existing", "host1", 80);
+        targetRepositoryStub.save(existing);
+
+        List<TargetDefinition> seeds = List.of(
+                new TargetDefinition("Existing label", "host1", 80, null, null),
+                new TargetDefinition("New Target", "host2", 443, null, null)
+        );
+
+        targetManager.initializeFromSeeds(seeds);
+
+        List<Target> savedTargets = targetRepositoryStub.findAll();
+        assertEquals(2, savedTargets.size());
+        assertTrue(savedTargets.stream().anyMatch(t -> t.getHost().equals("host1") && t.getPort() == 80));
+        assertTrue(savedTargets.stream().anyMatch(t -> t.getHost().equals("host2") && t.getPort() == 443));
+    }
+
+    @Test
+    void initializeFromSeeds_skipsInvalidSeeds() {
+        List<TargetDefinition> seeds = List.of(
+                new TargetDefinition("Missing host", "", 80, null, null),
+                new TargetDefinition("Invalid port", "host2", -1, null, null)
+        );
+
+        targetManager.initializeFromSeeds(seeds);
+
+        assertTrue(targetRepositoryStub.findAll().isEmpty());
+    }
+
+    @Test
+    void initializeFromSeeds_withDuplicates_createsOnceAndLogs(CapturedOutput output) {
+        Target existing = new Target(UUID.randomUUID(), "Existing", "host1", 80);
+        targetRepositoryStub.save(existing);
+
+        List<TargetDefinition> seeds = List.of(
+                new TargetDefinition("Existing label", "host1", 80, null, null),
+                new TargetDefinition("New target", "seed.example.com", 443, "TCP", null),
+                new TargetDefinition("Duplicate target", "seed.example.com", 443, null, null)
+        );
+
+        targetManager.initializeFromSeeds(seeds);
+
+        List<Target> savedTargets = targetRepositoryStub.findAll();
+        assertEquals(2, savedTargets.size());
+        assertTrue(savedTargets.stream().anyMatch(t -> t.getHost().equals("host1") && t.getPort() == 80));
+        assertTrue(savedTargets.stream().anyMatch(t -> t.getHost().equals("seed.example.com") && t.getPort() == 443));
+
+        assertThat(output.getOut())
+                .contains("Seeding target: {port=443, host=seed.example.com}")
+                .contains("Target already exists; skipping seed {port=80, host=host1}")
+                .contains("Target already exists; skipping seed {port=443, host=seed.example.com}");
+    }
+
+    @Test
+    void initializeFromSeeds_missingRequiredFields_logsWarningsAndSkips(CapturedOutput output) {
+        List<TargetDefinition> seeds = List.of(
+                new TargetDefinition("Blank host", "   ", 8080, null, null),
+                new TargetDefinition("Zero port", "valid.example.com", 0, null, null)
+        );
+
+        targetManager.initializeFromSeeds(seeds);
+
+        assertTrue(targetRepositoryStub.findAll().isEmpty());
+        assertThat(output.getOut())
+                .contains("Skipping seed with missing host")
+                .contains("Skipping seed with invalid port for host valid.example.com");
+    }
+
+    static class TargetRepositoryStub implements TargetRepository {
+        private final List<Target> targets = new ArrayList<>();
+
+        @Override
+        public List<Target> findAll() {
+            return new ArrayList<>(targets);
+        }
+
+        @Override
+        public Optional<Target> findById(UUID id) {
+            return targets.stream().filter(t -> t.getId().equals(id)).findFirst();
+        }
+
+        @Override
+        public Target save(Target target) {
+            targets.removeIf(t -> t.getId().equals(target.getId()));
+            targets.add(target);
+            return target;
+        }
+
+        @Override
+        public boolean delete(UUID id) {
+            return targets.removeIf(t -> t.getId().equals(id));
+        }
     }
 }

@@ -1,0 +1,10 @@
+schemaVersion: 1
+targets:
+  - label: "Cloudflare DNS"
+    host: "1.1.1.1"
+    port: 443
+    method: "TCP"
+    intervalSeconds: 60
+  - label: "Google DNS"
+    host: "8.8.8.8"
+    port: 53
