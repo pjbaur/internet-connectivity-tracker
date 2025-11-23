@@ -1,0 +1,9 @@
+schemaVersion: 1
+targets:
+  - label: "Seed Alpha"
+    host: "alpha.example.com"
+    port: 80
+    method: "TCP"
+  - label: "Seed Beta"
+    host: "beta.example.com"
+    port: 443
