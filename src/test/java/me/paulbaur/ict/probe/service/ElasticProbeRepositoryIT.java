@@ -41,6 +41,7 @@ public class ElasticProbeRepositoryIT {
                 "t1",
                 "localhost",
                 12L,
+                "cycle-it",
                 ProbeStatus.UP,
                 ProbeMethod.TCP,
                 null
@@ -67,6 +68,7 @@ public class ElasticProbeRepositoryIT {
                 "t1",
                 "localhost",
                 20L,
+                "cycle-it",
                 ProbeStatus.DOWN,
                 ProbeMethod.TCP,
                 "timeout"
@@ -87,9 +89,9 @@ public class ElasticProbeRepositoryIT {
         String target = "t-order";
         Instant now = Instant.now();
 
-        ProbeResult newest = new ProbeResult(now, target, "host", 5L, ProbeStatus.UP, ProbeMethod.TCP, null);
-        ProbeResult mid = new ProbeResult(now.minusSeconds(10), target, "host", 6L, ProbeStatus.UP, ProbeMethod.TCP, null);
-        ProbeResult oldest = new ProbeResult(now.minusSeconds(20), target, "host", 7L, ProbeStatus.UP, ProbeMethod.TCP, null);
+        ProbeResult newest = new ProbeResult(now, target, "host", 5L, "cycle-order", ProbeStatus.UP, ProbeMethod.TCP, null);
+        ProbeResult mid = new ProbeResult(now.minusSeconds(10), target, "host", 6L, "cycle-order", ProbeStatus.UP, ProbeMethod.TCP, null);
+        ProbeResult oldest = new ProbeResult(now.minusSeconds(20), target, "host", 7L, "cycle-order", ProbeStatus.UP, ProbeMethod.TCP, null);
 
         repo.save(oldest);
         repo.save(mid);
@@ -111,10 +113,10 @@ public class ElasticProbeRepositoryIT {
         String target = "t-range";
         Instant now = Instant.now();
 
-        ProbeResult a = new ProbeResult(now.minusSeconds(30), target, "host", 1L, ProbeStatus.UP, ProbeMethod.TCP, null);
-        ProbeResult b = new ProbeResult(now.minusSeconds(20), target, "host", 2L, ProbeStatus.UP, ProbeMethod.TCP, null);
-        ProbeResult c = new ProbeResult(now.minusSeconds(10), target, "host", 3L, ProbeStatus.UP, ProbeMethod.TCP, null);
-        ProbeResult d = new ProbeResult(now, target, "host", 4L, ProbeStatus.UP, ProbeMethod.TCP, null);
+        ProbeResult a = new ProbeResult(now.minusSeconds(30), target, "host", 1L, "cycle-range", ProbeStatus.UP, ProbeMethod.TCP, null);
+        ProbeResult b = new ProbeResult(now.minusSeconds(20), target, "host", 2L, "cycle-range", ProbeStatus.UP, ProbeMethod.TCP, null);
+        ProbeResult c = new ProbeResult(now.minusSeconds(10), target, "host", 3L, "cycle-range", ProbeStatus.UP, ProbeMethod.TCP, null);
+        ProbeResult d = new ProbeResult(now, target, "host", 4L, "cycle-range", ProbeStatus.UP, ProbeMethod.TCP, null);
 
         repo.save(a);
         repo.save(b);

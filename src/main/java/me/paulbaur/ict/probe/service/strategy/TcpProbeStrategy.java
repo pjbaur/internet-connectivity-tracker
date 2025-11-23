@@ -41,6 +41,7 @@ public class TcpProbeStrategy implements ProbeStrategy {
         Instant start = Instant.now();
         String host = request.host();
         int port = request.port();
+        String probeCycleId = request.probeCycleId();
 
         try (Socket socket = socketSupplier.get()) {
             long beforeConnect = System.nanoTime();
@@ -56,7 +57,8 @@ public class TcpProbeStrategy implements ProbeStrategy {
                     kv("port", port),
                     kv("latencyMs", latencyMs),
                     kv("status", ProbeStatus.UP),
-                    kv("method", ProbeMethod.TCP)
+                    kv("method", ProbeMethod.TCP),
+                    kv("probeCycleId", probeCycleId)
             );
 
             return new ProbeResult(
@@ -64,6 +66,7 @@ public class TcpProbeStrategy implements ProbeStrategy {
                     request.targetId(),
                     host,
                     latencyMs,
+                    probeCycleId,
                     ProbeStatus.UP,
                     ProbeMethod.TCP,
                     null
@@ -76,6 +79,7 @@ public class TcpProbeStrategy implements ProbeStrategy {
                     kv("port", port),
                     kv("status", ProbeStatus.DOWN),
                     kv("method", ProbeMethod.TCP),
+                    kv("probeCycleId", probeCycleId),
                     kv("error", e.getMessage())
             );
             return createFailureResult(start, request, "connection timed out");
@@ -87,6 +91,7 @@ public class TcpProbeStrategy implements ProbeStrategy {
                     kv("port", port),
                     kv("status", ProbeStatus.DOWN),
                     kv("method", ProbeMethod.TCP),
+                    kv("probeCycleId", probeCycleId),
                     kv("error", e.getMessage())
             );
             return createFailureResult(start, request, "connection refused");
@@ -98,6 +103,7 @@ public class TcpProbeStrategy implements ProbeStrategy {
                     kv("port", port),
                     kv("status", ProbeStatus.DOWN),
                     kv("method", ProbeMethod.TCP),
+                    kv("probeCycleId", probeCycleId),
                     kv("error", "unknown host")
             );
             return createFailureResult(start, request, "unknown host");
@@ -109,6 +115,7 @@ public class TcpProbeStrategy implements ProbeStrategy {
                     kv("port", port),
                     kv("status", ProbeStatus.DOWN),
                     kv("method", ProbeMethod.TCP),
+                    kv("probeCycleId", probeCycleId),
                     kv("error", e.getMessage())
             );
             return createFailureResult(start, request, "I/O error: " + e.getMessage());
@@ -121,6 +128,7 @@ public class TcpProbeStrategy implements ProbeStrategy {
                 request.targetId(),
                 request.host(),
                 null, // Latency is null for failures
+                request.probeCycleId(),
                 ProbeStatus.DOWN,
                 ProbeMethod.TCP,
                 errorMessage
