@@ -49,3 +49,15 @@
 ### Phase 6 — Testing & Verification
 - Add log-capturing tests for key flows (probe success/failure, seeding edge cases, repository failures) to ensure log messages contain required keys.
 - Add a small logging style guide to `/docs` and enforce via code review checklist.
+
+## Thoughts from **Grok 4.1**
+
+|Item|Recommendation|
+|----|--------------|
+|File rolling policy in Phase 1|"You wrote “Rolling policy for file output (if desired)”. In a container-first project, consider making file output opt-in only (e.g. active only under spring profile local or file-logging). Otherwise you risk people accidentally enabling file appenders in Kubernetes and filling up ephemeral storage."|
+|JSON appender dependency version|Use net.logstash.logback:logstash-logback-encoder 7.4 or 8.0 (both Java-21 compatible). 7.4 is battle-tested; 8.0 has nicer LoggingEventCompositeJsonEncoder defaults.|
+|MDC clearing|Add MDC.clear() (or try-with-resources wrapper) in the servlet filter and in the scheduler tick so old values can’t leak between requests/cycles.|
+|Rate limiting implementation|The simplest thing that works is ch.qos.logback.ext.RateLimiter from logback-contribs or a small Guava RateLimiter + a Logback TurboFilter. Both are <10 lines.|
+|Profile naming for JSON|Common convention is json-logging or elastic. Document how to activate it in docker-compose (SPRING_PROFILES_ACTIVE=json-logging).|
+|probeCycleId generation|"A UUID per scheduler tick is perfect, but also consider adding an incrementing cycleNumber (long) — humans love sequential numbers in dashboards."|
+|Avoid logging full request/response bodies|"If you ever add REST-client logging, make sure it’s behind DEBUG and truncated, otherwise ES storage explodes."|
