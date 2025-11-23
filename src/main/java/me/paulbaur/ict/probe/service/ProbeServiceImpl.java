@@ -12,6 +12,8 @@ import me.paulbaur.ict.target.store.TargetRepository;
 
 import org.springframework.stereotype.Service;
 
+import static net.logstash.logback.argument.StructuredArguments.kv;
+
 import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
@@ -29,7 +31,12 @@ public class ProbeServiceImpl implements ProbeService {
     private final TargetRepository targetRepository;
 
     public ProbeResult probe(Target target) {
-        log.debug("Initiating probe for target ID '{}' at {}:{}", target.getId(), target.getHost(), target.getPort());
+        log.debug(
+                "Initiating probe for target",
+                kv("targetId", target.getId()),
+                kv("host", target.getHost()),
+                kv("port", target.getPort())
+        );
         ProbeRequest request = new ProbeRequest(
                 target.getId().toString(),
                 target.getHost(),
@@ -40,14 +47,29 @@ public class ProbeServiceImpl implements ProbeService {
             ProbeResult result = probeStrategy.probe(request);
             probeRepository.save(result);
 
-            log.info("Probe completed for target '{}': status={}, latency={}ms, method={}",
-                    target.getId(), result.status(), result.latencyMs(), result.method());
+            log.info(
+                    "Probe completed for target",
+                    kv("targetId", target.getId()),
+                    kv("host", target.getHost()),
+                    kv("port", target.getPort()),
+                    kv("status", result.status()),
+                    kv("latencyMs", result.latencyMs()),
+                    kv("method", result.method())
+            );
 
             return result;
         } catch (Exception ex) {
             // Catch unexpected exceptions from the strategy or repository
-            log.error("Unexpected error during probe for target '{}' ({}:{}): {}",
-                    target.getId(), target.getHost(), target.getPort(), ex.getMessage(), ex);
+            log.error(
+                    "Unexpected error during probe",
+                    kv("targetId", target.getId()),
+                    kv("host", target.getHost()),
+                    kv("port", target.getPort()),
+                    kv("status", ProbeStatus.DOWN),
+                    kv("method", ProbeMethod.TCP),
+                    kv("error", ex.getMessage()),
+                    ex
+            );
 
             // Create a failure result to ensure the system remains stable
             ProbeResult failureResult = new ProbeResult(
@@ -85,7 +107,12 @@ public class ProbeServiceImpl implements ProbeService {
         try {
             return probeRepository.findRecent(targetId, limit);
         } catch (Exception ex) {
-            log.error("Failed to retrieve recent results for {}", targetId, ex);
+            log.error(
+                    "Failed to retrieve recent results",
+                    kv("targetId", targetId),
+                    kv("limit", limit),
+                    ex
+            );
             return Collections.emptyList();
         }
     }
@@ -102,7 +129,14 @@ public class ProbeServiceImpl implements ProbeService {
 
             return probeRepository.findRecent(targetId, limit);
         } catch (Exception ex) {
-            log.error("Failed to retrieve history for {} between {} and {}", targetId, start, end, ex);
+            log.error(
+                    "Failed to retrieve history for target",
+                    kv("targetId", targetId),
+                    kv("rangeStart", start),
+                    kv("rangeEnd", end),
+                    kv("limit", limit),
+                    ex
+            );
             return Collections.emptyList();
         }
     }
@@ -113,7 +147,7 @@ public class ProbeServiceImpl implements ProbeService {
         targetRepository.findById(targetUUID)
                 .ifPresentOrElse(
                         this::probe,
-                        () -> log.error("Cannot probe target: no target found with ID '{}'", targetId)
+                        () -> log.error("Cannot probe target: no target found", kv("targetId", targetId))
                 );
     }
 
