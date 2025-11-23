@@ -1,0 +1,89 @@
+# ================================
+# Maven / Build output
+# ================================
+target/
+!.mvn/wrapper/maven-wrapper.jar
+
+# ================================
+# IntelliJ / Editor / IDE
+# ================================
+.idea/
+*.iml
+*.ipr
+*.iws
+out/
+*.swp
+*.swo
+
+# VS Code
+.vscode/
+
+# ================================
+# OS / System Files
+# ================================
+.DS_Store
+Thumbs.db
+
+# ================================
+# Git
+# ================================
+.git/
+.gitignore
+
+# ================================
+# Logs / Temp
+# ================================
+*.log
+*.tmp
+*.temp
+
+# Spring Boot devtools cache
+.spring-boot-devtools.properties
+
+# ================================
+# Bytecode / Compilation
+# ================================
+*.class
+*.jar
+*.war
+*.ear
+
+# ================================
+# Docker
+# ================================
+*.pid
+
+# ================================
+# Tests / Coverage
+# ================================
+surefire-reports/
+jacoco.exec
+
+# ================================
+# Local config overrides
+# ================================
+application-local.yml
+application-local.properties
+
+# ================================
+# Node / Frontend (if any future UI added)
+# ================================
+node_modules/
+dist/
+build/
+
+# ================================
+# Project-specific exclusions
+# ================================
+docs/generated/
+*.zip
+*.tgz
+*.tar.gz
+
+# Avoid sending sample data or test resources unless needed
+src/test/resources/**
+
+# ================================
+# Allowlist (important)
+# ================================
+!src/main/resources/**
