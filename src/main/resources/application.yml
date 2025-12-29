@@ -21,7 +21,34 @@ management:
       application: ${spring.application.name}
       environment: ${ENVIRONMENT:local}
 
+resilience4j:
+  retry:
+    instances:
+      elasticsearch:
+        maxAttempts: 3
+        waitDuration: 500ms
+        retryExceptions:
+          - java.io.IOException
+          - co.elastic.clients.transport.TransportException
+      tcpProbe:
+        maxAttempts: 2
+        waitDuration: 100ms
+        retryExceptions:
+          - java.net.SocketTimeoutException
+  circuitbreaker:
+    instances:
+      elasticsearch:
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+        failureRateThreshold: 50
+        waitDurationInOpenState: 10s
+        permittedNumberOfCallsInHalfOpenState: 3
+
 ict:
+  ratelimit:
+    enabled: true
+    requests-per-minute: 100
+    burst-capacity: 20
   probe:
     interval-ms: 1000       # 1 second default
     logging-debug: false    # enable DEBUG logs for probe subpackage when true

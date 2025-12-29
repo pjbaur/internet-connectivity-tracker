@@ -3,7 +3,9 @@ package me.paulbaur.ict.common.api;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
+import me.paulbaur.ict.common.exception.CircuitBreakerOpenException;
 import me.paulbaur.ict.common.exception.NotFoundException;
+import me.paulbaur.ict.common.exception.RateLimitExceededException;
 import me.paulbaur.ict.common.model.ErrorResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,6 +39,32 @@ public class GlobalExceptionHandler {
                 kv("path", request.getRequestURI())
         );
         return buildError(message, "NOT_FOUND", HttpStatus.NOT_FOUND);
+    }
+
+    @ExceptionHandler(RateLimitExceededException.class)
+    public ResponseEntity<ErrorResponse> handleRateLimitExceeded(RateLimitExceededException ex, HttpServletRequest request) {
+        String message = ex.getMessage();
+        log.warn(
+                "Rate limit exceeded",
+                kv("errorCode", "RATE_LIMIT_EXCEEDED"),
+                kv("status", HttpStatus.TOO_MANY_REQUESTS.value()),
+                kv("message", message),
+                kv("path", request.getRequestURI())
+        );
+        return buildError(message, "RATE_LIMIT_EXCEEDED", HttpStatus.TOO_MANY_REQUESTS);
+    }
+
+    @ExceptionHandler(CircuitBreakerOpenException.class)
+    public ResponseEntity<ErrorResponse> handleCircuitBreakerOpen(CircuitBreakerOpenException ex, HttpServletRequest request) {
+        String message = "Service temporarily unavailable";
+        log.error(
+                "Circuit breaker open",
+                kv("errorCode", "SERVICE_UNAVAILABLE"),
+                kv("status", HttpStatus.SERVICE_UNAVAILABLE.value()),
+                kv("message", ex.getMessage()),
+                kv("path", request.getRequestURI())
+        );
+        return buildError(message, "SERVICE_UNAVAILABLE", HttpStatus.SERVICE_UNAVAILABLE);
     }
 
     @ExceptionHandler(IllegalArgumentException.class)

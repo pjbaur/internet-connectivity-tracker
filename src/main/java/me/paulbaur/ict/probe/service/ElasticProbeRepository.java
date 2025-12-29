@@ -8,6 +8,9 @@ import co.elastic.clients.elasticsearch.core.SearchRequest;
 import co.elastic.clients.elasticsearch.core.SearchResponse;
 import co.elastic.clients.json.JsonData;
 
+import io.github.resilience4j.circuitbreaker.CircuitBreaker;
+import io.github.resilience4j.retry.Retry;
+import me.paulbaur.ict.common.exception.CircuitBreakerOpenException;
 import me.paulbaur.ict.common.metrics.ProbeMetrics;
 import me.paulbaur.ict.probe.domain.ProbeResult;
 import org.springframework.beans.factory.annotation.Value;
@@ -16,6 +19,7 @@ import org.springframework.stereotype.Repository;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Supplier;
 
 @Repository
 public class ElasticProbeRepository implements ProbeRepository {
@@ -23,26 +27,52 @@ public class ElasticProbeRepository implements ProbeRepository {
     private final ElasticsearchClient client;
     private final String index;
     private final ProbeMetrics probeMetrics;
+    private final Retry elasticsearchRetry;
+    private final CircuitBreaker elasticsearchCircuitBreaker;
 
     public ElasticProbeRepository(
             ElasticsearchClient client,
             @Value("${ict.elasticsearch.index:probe-results}") String index,
-            ProbeMetrics probeMetrics) {
+            ProbeMetrics probeMetrics,
+            Retry elasticsearchRetry,
+            CircuitBreaker elasticsearchCircuitBreaker) {
         this.client = client;
         this.index = index;
         this.probeMetrics = probeMetrics;
+        this.elasticsearchRetry = elasticsearchRetry;
+        this.elasticsearchCircuitBreaker = elasticsearchCircuitBreaker;
+    }
+
+    /**
+     * Execute a supplier with retry and circuit breaker protection.
+     */
+    private <T> T executeWithResilience(Supplier<T> operation) {
+        Supplier<T> decoratedOperation = Retry.decorateSupplier(elasticsearchRetry, operation);
+        decoratedOperation = CircuitBreaker.decorateSupplier(elasticsearchCircuitBreaker, decoratedOperation);
+
+        try {
+            return decoratedOperation.get();
+        } catch (io.github.resilience4j.circuitbreaker.CallNotPermittedException ex) {
+            throw new CircuitBreakerOpenException("Elasticsearch circuit breaker is OPEN - rejecting calls", ex);
+        }
     }
 
     @Override
     public void save(ProbeResult result) {
         long startTime = System.currentTimeMillis();
         try {
-            IndexRequest<ProbeResult> req = new IndexRequest.Builder<ProbeResult>()
-                    .index(index)
-                    .document(result)
-                    .build();
+            executeWithResilience(() -> {
+                try {
+                    IndexRequest<ProbeResult> req = new IndexRequest.Builder<ProbeResult>()
+                            .index(index)
+                            .document(result)
+                            .build();
 
-            client.index(req);
+                    return client.index(req);
+                } catch (Exception ex) {
+                    throw new RuntimeException(ex);
+                }
+            });
 
             long duration = System.currentTimeMillis() - startTime;
             probeMetrics.recordElasticsearchOperation("save", "success");
@@ -72,26 +102,31 @@ public class ElasticProbeRepository implements ProbeRepository {
     public List<ProbeResult> findRecent(String targetId, int limit) {
         long startTime = System.currentTimeMillis();
         try {
-            // Use a match query against the keyword sub-field so exact target id matches work
-            SearchRequest request = new SearchRequest.Builder()
-                    .index(index)
-                    .query(q -> q
-                            .match(m -> m
-                                    .field("targetId.keyword")
-                                    .query(targetId)
+            SearchResponse<ProbeResult> response = executeWithResilience(() -> {
+                try {
+                    // Use a match query against the keyword sub-field so exact target id matches work
+                    SearchRequest request = new SearchRequest.Builder()
+                            .index(index)
+                            .query(q -> q
+                                    .match(m -> m
+                                            .field("targetId.keyword")
+                                            .query(targetId)
+                                    )
                             )
-                    )
-                    .sort(s -> s
-                            .field(f -> f
-                                    .field("timestamp")
-                                    .order(SortOrder.Desc)
+                            .sort(s -> s
+                                    .field(f -> f
+                                            .field("timestamp")
+                                            .order(SortOrder.Desc)
+                                    )
                             )
-                    )
-                    .size(limit)
-                    .build();
+                            .size(limit)
+                            .build();
 
-            SearchResponse<ProbeResult> response =
-                    client.search(request, ProbeResult.class);
+                    return client.search(request, ProbeResult.class);
+                } catch (Exception ex) {
+                    throw new RuntimeException(ex);
+                }
+            });
 
             List<ProbeResult> results = extractHits(response);
 
@@ -129,30 +164,35 @@ public class ElasticProbeRepository implements ProbeRepository {
     public List<ProbeResult> findBetween(String targetId, Instant start, Instant end) {
         long startTime = System.currentTimeMillis();
         try {
-            // Build a date range query using ISO-8601 strings for the start/end instants
-            Query rangeQuery = Query.of(q -> q
-                    .range(r -> r
-                            .field("timestamp")
-                            .gte(JsonData.of(start.toString()))
-                            .lte(JsonData.of(end.toString()))
-                    )
-            );
-
-            SearchRequest request = new SearchRequest.Builder()
-                    .index(index)
-                    .query(q -> q
-                            .bool(b -> b
-                                    .must(m -> m.match(mt -> mt.field("targetId.keyword").query(targetId)))
-                                    .must(rangeQuery)
+            SearchResponse<ProbeResult> response = executeWithResilience(() -> {
+                try {
+                    // Build a date range query using ISO-8601 strings for the start/end instants
+                    Query rangeQuery = Query.of(q -> q
+                            .range(r -> r
+                                    .field("timestamp")
+                                    .gte(JsonData.of(start.toString()))
+                                    .lte(JsonData.of(end.toString()))
                             )
-                    )
-                    .sort(s -> s.field(f -> f.field("timestamp").order(SortOrder.Desc)))
-                    // allow a reasonably large window; callers should page if they expect more
-                    .size(5000)
-                    .build();
+                    );
 
-            SearchResponse<ProbeResult> response =
-                    client.search(request, ProbeResult.class);
+                    SearchRequest request = new SearchRequest.Builder()
+                            .index(index)
+                            .query(q -> q
+                                    .bool(b -> b
+                                            .must(m -> m.match(mt -> mt.field("targetId.keyword").query(targetId)))
+                                            .must(rangeQuery)
+                                    )
+                            )
+                            .sort(s -> s.field(f -> f.field("timestamp").order(SortOrder.Desc)))
+                            // allow a reasonably large window; callers should page if they expect more
+                            .size(5000)
+                            .build();
+
+                    return client.search(request, ProbeResult.class);
+                } catch (Exception ex) {
+                    throw new RuntimeException(ex);
+                }
+            });
 
             List<ProbeResult> results = extractHits(response);
 
@@ -174,15 +214,21 @@ public class ElasticProbeRepository implements ProbeRepository {
     public Optional<ProbeResult> findLatest() {
         long startTime = System.currentTimeMillis();
         try {
-            SearchResponse<ProbeResult> response = client.search(s -> s
-                    .index(this.index)
-                    .size(1)
-                    .sort(sort -> sort
-                            .field(f -> f
-                                    .field("timestamp")
-                                    .order(SortOrder.Desc)
-                            ))
-                    , ProbeResult.class);
+            SearchResponse<ProbeResult> response = executeWithResilience(() -> {
+                try {
+                    return client.search(s -> s
+                            .index(this.index)
+                            .size(1)
+                            .sort(sort -> sort
+                                    .field(f -> f
+                                            .field("timestamp")
+                                            .order(SortOrder.Desc)
+                                    ))
+                            , ProbeResult.class);
+                } catch (Exception ex) {
+                    throw new RuntimeException(ex);
+                }
+            });
 
             Optional<ProbeResult> result = extractFirst(response);
 

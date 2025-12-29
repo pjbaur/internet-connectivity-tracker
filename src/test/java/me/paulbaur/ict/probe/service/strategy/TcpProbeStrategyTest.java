@@ -23,7 +23,7 @@ class TcpProbeStrategyTest {
     @Test
     @Timeout(2)
     void probe_whenConnectionSucceeds_returnsUp() {
-        TcpProbeStrategy strategy = new TcpProbeStrategy(SuccessSocket::new);
+        TcpProbeStrategy strategy = new TcpProbeStrategy(SuccessSocket::new, null);
         String probeCycleId = UUID.randomUUID().toString();
         ProbeRequest request = new ProbeRequest(UUID.randomUUID().toString(), "1.1.1.1", 53, probeCycleId);
 
@@ -42,7 +42,7 @@ class TcpProbeStrategyTest {
     @Test
     @Timeout(2)
     void probe_whenConnectionTimesOut_returnsDown() {
-        TcpProbeStrategy strategy = new TcpProbeStrategy(TimeoutSocket::new);
+        TcpProbeStrategy strategy = new TcpProbeStrategy(TimeoutSocket::new, null);
         ProbeRequest request = new ProbeRequest(UUID.randomUUID().toString(), "192.168.2.1", 80, UUID.randomUUID().toString());
 
         ProbeResult result = strategy.probe(request);
@@ -56,7 +56,7 @@ class TcpProbeStrategyTest {
     @Test
     @Timeout(2)
     void probe_whenConnectionIsRefused_returnsDown() {
-        TcpProbeStrategy strategy = new TcpProbeStrategy(ConnectionRefusedSocket::new);
+        TcpProbeStrategy strategy = new TcpProbeStrategy(ConnectionRefusedSocket::new, null);
         ProbeRequest request = new ProbeRequest(UUID.randomUUID().toString(), "localhost", 1, UUID.randomUUID().toString());
 
         ProbeResult result = strategy.probe(request);
@@ -70,7 +70,7 @@ class TcpProbeStrategyTest {
     @Test
     @Timeout(2)
     void probe_whenHostIsUnknown_returnsDown() {
-        TcpProbeStrategy strategy = new TcpProbeStrategy(UnknownHostSocket::new);
+        TcpProbeStrategy strategy = new TcpProbeStrategy(UnknownHostSocket::new, null);
         String nonExistentHost = "test-" + UUID.randomUUID().toString() + ".invalid";
         ProbeRequest request = new ProbeRequest(UUID.randomUUID().toString(), nonExistentHost, 80, UUID.randomUUID().toString());
 

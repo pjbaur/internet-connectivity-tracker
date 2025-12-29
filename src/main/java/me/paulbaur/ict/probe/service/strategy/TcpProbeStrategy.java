@@ -1,11 +1,13 @@
 package me.paulbaur.ict.probe.service.strategy;
 
+import io.github.resilience4j.retry.Retry;
 import lombok.extern.slf4j.Slf4j;
 import me.paulbaur.ict.common.model.ProbeMethod;
 import me.paulbaur.ict.common.model.ProbeStatus;
 import me.paulbaur.ict.common.logging.LogRateLimiter;
 import me.paulbaur.ict.probe.domain.ProbeRequest;
 import me.paulbaur.ict.probe.domain.ProbeResult;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import static net.logstash.logback.argument.StructuredArguments.kv;
@@ -32,13 +34,20 @@ public class TcpProbeStrategy implements ProbeStrategy {
             new LogRateLimiter(CONNECTION_REFUSED_LOG_INTERVAL);
 
     private final Supplier<Socket> socketSupplier;
+    private final Retry tcpProbeRetry;
 
     public TcpProbeStrategy() {
-        this(Socket::new);
+        this(Socket::new, null);
     }
 
-    TcpProbeStrategy(Supplier<Socket> socketSupplier) {
+    @Autowired
+    public TcpProbeStrategy(Retry tcpProbeRetry) {
+        this(Socket::new, tcpProbeRetry);
+    }
+
+    TcpProbeStrategy(Supplier<Socket> socketSupplier, Retry tcpProbeRetry) {
         this.socketSupplier = Objects.requireNonNull(socketSupplier, "socketSupplier");
+        this.tcpProbeRetry = tcpProbeRetry;
     }
 
     @Override
@@ -48,12 +57,19 @@ public class TcpProbeStrategy implements ProbeStrategy {
         int port = request.port();
         String probeCycleId = request.probeCycleId();
 
-        try (Socket socket = socketSupplier.get()) {
-            long beforeConnect = System.nanoTime();
-            socket.connect(new InetSocketAddress(host, port), DEFAULT_TIMEOUT_MS);
-            long afterConnect = System.nanoTime();
+        try {
+            // Wrap the connection attempt with retry if tcpProbeRetry is available
+            long latencyMs = executeWithRetry(() -> {
+                try (Socket socket = socketSupplier.get()) {
+                    long beforeConnect = System.nanoTime();
+                    socket.connect(new InetSocketAddress(host, port), DEFAULT_TIMEOUT_MS);
+                    long afterConnect = System.nanoTime();
 
-            long latencyMs = (afterConnect - beforeConnect) / 1_000_000;
+                    return (afterConnect - beforeConnect) / 1_000_000;
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            });
 
             log.debug(
                     "TCP probe succeeded",
@@ -76,74 +92,103 @@ public class TcpProbeStrategy implements ProbeStrategy {
                     ProbeMethod.TCP,
                     null
             );
-        } catch (SocketTimeoutException e) {
-            log.warn(
-                    "TCP probe timed out",
-                    kv("targetId", request.targetId()),
-                    kv("host", host),
-                    kv("port", port),
-                    kv("status", ProbeStatus.DOWN),
-                    kv("method", ProbeMethod.TCP),
-                    kv("probeCycleId", probeCycleId),
-                    kv("error", e.getMessage())
-            );
-            return createFailureResult(start, request, "connection timed out");
-        } catch (ConnectException e) {
-            String limiterKey = host + ":" + port;
-            boolean shouldLog = connectionRefusedLimiter.shouldLog(limiterKey);
+        } catch (RuntimeException e) {
+            Throwable cause = e.getCause();
 
-            if (shouldLog) {
+            if (cause instanceof SocketTimeoutException) {
                 log.warn(
-                        "TCP probe connection refused",
+                        "TCP probe timed out",
                         kv("targetId", request.targetId()),
                         kv("host", host),
                         kv("port", port),
                         kv("status", ProbeStatus.DOWN),
                         kv("method", ProbeMethod.TCP),
                         kv("probeCycleId", probeCycleId),
-                        kv("error", e.getMessage()),
-                        kv("rateLimited", false),
-                        kv("rateLimitWindowSec", CONNECTION_REFUSED_LOG_INTERVAL.toSeconds())
+                        kv("error", cause.getMessage())
                 );
-            } else {
-                log.debug(
-                        "TCP probe connection refused (suppressed by rate limit)",
-                        kv("targetId", request.targetId()),
-                        kv("host", host),
-                        kv("port", port),
-                        kv("status", ProbeStatus.DOWN),
-                        kv("method", ProbeMethod.TCP),
-                        kv("probeCycleId", probeCycleId),
-                        kv("error", e.getMessage()),
-                        kv("rateLimited", true)
-                );
-            }
+                return createFailureResult(start, request, "connection timed out");
+            } else if (cause instanceof ConnectException) {
+                ConnectException connectEx = (ConnectException) cause;
+                String limiterKey = host + ":" + port;
+                boolean shouldLog = connectionRefusedLimiter.shouldLog(limiterKey);
 
-            return createFailureResult(start, request, "connection refused");
-        } catch (UnknownHostException e) {
-            log.warn(
-                    "TCP probe failed: unknown host",
-                    kv("targetId", request.targetId()),
-                    kv("host", host),
-                    kv("port", port),
-                    kv("status", ProbeStatus.DOWN),
-                    kv("method", ProbeMethod.TCP),
-                    kv("probeCycleId", probeCycleId),
-                    kv("error", "unknown host")
-            );
-            return createFailureResult(start, request, "unknown host");
-        } catch (IOException e) {
-            log.warn(
-                    "TCP probe I/O error",
-                    kv("targetId", request.targetId()),
-                    kv("host", host),
-                    kv("port", port),
-                    kv("status", ProbeStatus.DOWN),
-                    kv("method", ProbeMethod.TCP),
-                    kv("probeCycleId", probeCycleId),
-                    kv("error", e.getMessage())
-            );
-            return createFailureResult(start, request, "I/O error: " + e.getMessage());
+                if (shouldLog) {
+                    log.warn(
+                            "TCP probe connection refused",
+                            kv("targetId", request.targetId()),
+                            kv("host", host),
+                            kv("port", port),
+                            kv("status", ProbeStatus.DOWN),
+                            kv("method", ProbeMethod.TCP),
+                            kv("probeCycleId", probeCycleId),
+                            kv("error", connectEx.getMessage()),
+                            kv("rateLimited", false),
+                            kv("rateLimitWindowSec", CONNECTION_REFUSED_LOG_INTERVAL.toSeconds())
+                    );
+                } else {
+                    log.debug(
+                            "TCP probe connection refused (suppressed by rate limit)",
+                            kv("targetId", request.targetId()),
+                            kv("host", host),
+                            kv("port", port),
+                            kv("status", ProbeStatus.DOWN),
+                            kv("method", ProbeMethod.TCP),
+                            kv("probeCycleId", probeCycleId),
+                            kv("error", connectEx.getMessage()),
+                            kv("rateLimited", true)
+                    );
+                }
+
+                return createFailureResult(start, request, "connection refused");
+            } else if (cause instanceof UnknownHostException) {
+                log.warn(
+                        "TCP probe failed: unknown host",
+                        kv("targetId", request.targetId()),
+                        kv("host", host),
+                        kv("port", port),
+                        kv("status", ProbeStatus.DOWN),
+                        kv("method", ProbeMethod.TCP),
+                        kv("probeCycleId", probeCycleId),
+                        kv("error", "unknown host")
+                );
+                return createFailureResult(start, request, "unknown host");
+            } else if (cause instanceof IOException) {
+                log.warn(
+                        "TCP probe I/O error",
+                        kv("targetId", request.targetId()),
+                        kv("host", host),
+                        kv("port", port),
+                        kv("status", ProbeStatus.DOWN),
+                        kv("method", ProbeMethod.TCP),
+                        kv("probeCycleId", probeCycleId),
+                        kv("error", cause.getMessage())
+                );
+                return createFailureResult(start, request, "I/O error: " + cause.getMessage());
+            } else {
+                // Unexpected exception
+                log.error(
+                        "TCP probe unexpected error",
+                        kv("targetId", request.targetId()),
+                        kv("host", host),
+                        kv("port", port),
+                        kv("status", ProbeStatus.DOWN),
+                        kv("method", ProbeMethod.TCP),
+                        kv("probeCycleId", probeCycleId),
+                        e
+                );
+                return createFailureResult(start, request, "unexpected error: " + e.getMessage());
+            }
+        }
+    }
+
+    /**
+     * Execute the operation with retry if tcpProbeRetry is configured.
+     */
+    private <T> T executeWithRetry(Supplier<T> operation) {
+        if (tcpProbeRetry != null) {
+            return Retry.decorateSupplier(tcpProbeRetry, operation).get();
+        } else {
+            return operation.get();
         }
     }
 
