@@ -1,5 +1,6 @@
 package me.paulbaur.ict.probe.service;
 
+import me.paulbaur.ict.common.metrics.ProbeMetrics;
 import me.paulbaur.ict.common.model.ProbeMethod;
 import me.paulbaur.ict.common.model.ProbeStatus;
 import me.paulbaur.ict.probe.domain.ProbeRequest;
@@ -10,6 +11,9 @@ import me.paulbaur.ict.target.store.TargetRepository;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -19,7 +23,12 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+@ExtendWith(MockitoExtension.class)
+
 class ProbeServiceImplTest {
+
+    @Mock
+    private ProbeMetrics probeMetrics;
 
     private ProbeServiceImpl probeService;
 
@@ -43,7 +52,8 @@ class ProbeServiceImplTest {
                 targetSelectorStub,
                 probeStrategySpy,
                 probeRepositoryStub,
-                targetRepositoryStub
+                targetRepositoryStub,
+                probeMetrics
         );
     }
 

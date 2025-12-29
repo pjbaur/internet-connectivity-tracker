@@ -1,5 +1,6 @@
 package me.paulbaur.ict.probe.service;
 
+import me.paulbaur.ict.common.health.ProbeSchedulerHealthIndicator;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -14,6 +15,9 @@ class ProbeSchedulerTest {
     @Mock
     private ProbeService probeService;
 
+    @Mock
+    private ProbeSchedulerHealthIndicator healthIndicator;
+
     @InjectMocks
     private ProbeScheduler probeScheduler;
 
@@ -24,5 +28,6 @@ class ProbeSchedulerTest {
 
         // Then
         verify(probeService).runScheduledProbes();
+        verify(healthIndicator).recordExecution();
     }
 }

@@ -8,6 +8,7 @@ import co.elastic.clients.elasticsearch.core.SearchRequest;
 import co.elastic.clients.elasticsearch.core.SearchResponse;
 import co.elastic.clients.json.JsonData;
 
+import me.paulbaur.ict.common.metrics.ProbeMetrics;
 import me.paulbaur.ict.probe.domain.ProbeResult;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Repository;
@@ -21,16 +22,20 @@ public class ElasticProbeRepository implements ProbeRepository {
 
     private final ElasticsearchClient client;
     private final String index;
+    private final ProbeMetrics probeMetrics;
 
     public ElasticProbeRepository(
             ElasticsearchClient client,
-            @Value("${ict.elasticsearch.index:probe-results}") String index) {
+            @Value("${ict.elasticsearch.index:probe-results}") String index,
+            ProbeMetrics probeMetrics) {
         this.client = client;
         this.index = index;
+        this.probeMetrics = probeMetrics;
     }
 
     @Override
     public void save(ProbeResult result) {
+        long startTime = System.currentTimeMillis();
         try {
             IndexRequest<ProbeResult> req = new IndexRequest.Builder<ProbeResult>()
                     .index(index)
@@ -38,7 +43,14 @@ public class ElasticProbeRepository implements ProbeRepository {
                     .build();
 
             client.index(req);
+
+            long duration = System.currentTimeMillis() - startTime;
+            probeMetrics.recordElasticsearchOperation("save", "success");
+            probeMetrics.recordElasticsearchOperationDuration("save", duration);
         } catch (Exception ex) {
+            long duration = System.currentTimeMillis() - startTime;
+            probeMetrics.recordElasticsearchOperation("save", "failure");
+            probeMetrics.recordElasticsearchOperationDuration("save", duration);
             // Wrap lower-level exception in repository-specific unchecked exception
             throw new ProbeRepositoryException("Failed to index probe result for target " + result.targetId(), ex);
         }
@@ -58,6 +70,7 @@ public class ElasticProbeRepository implements ProbeRepository {
      */
     @Override
     public List<ProbeResult> findRecent(String targetId, int limit) {
+        long startTime = System.currentTimeMillis();
         try {
             // Use a match query against the keyword sub-field so exact target id matches work
             SearchRequest request = new SearchRequest.Builder()
@@ -80,9 +93,18 @@ public class ElasticProbeRepository implements ProbeRepository {
             SearchResponse<ProbeResult> response =
                     client.search(request, ProbeResult.class);
 
-            return extractHits(response);
+            List<ProbeResult> results = extractHits(response);
+
+            long duration = System.currentTimeMillis() - startTime;
+            probeMetrics.recordElasticsearchOperation("findRecent", "success");
+            probeMetrics.recordElasticsearchOperationDuration("findRecent", duration);
+
+            return results;
 
         } catch (Exception ex) {
+            long duration = System.currentTimeMillis() - startTime;
+            probeMetrics.recordElasticsearchOperation("findRecent", "failure");
+            probeMetrics.recordElasticsearchOperationDuration("findRecent", duration);
             throw new ProbeRepositoryException("Failed to fetch recent probe results for target " + targetId, ex);
         }
     }
@@ -105,6 +127,7 @@ public class ElasticProbeRepository implements ProbeRepository {
      */
     @Override
     public List<ProbeResult> findBetween(String targetId, Instant start, Instant end) {
+        long startTime = System.currentTimeMillis();
         try {
             // Build a date range query using ISO-8601 strings for the start/end instants
             Query rangeQuery = Query.of(q -> q
@@ -131,15 +154,25 @@ public class ElasticProbeRepository implements ProbeRepository {
             SearchResponse<ProbeResult> response =
                     client.search(request, ProbeResult.class);
 
-            return extractHits(response);
+            List<ProbeResult> results = extractHits(response);
+
+            long duration = System.currentTimeMillis() - startTime;
+            probeMetrics.recordElasticsearchOperation("findBetween", "success");
+            probeMetrics.recordElasticsearchOperationDuration("findBetween", duration);
+
+            return results;
 
         } catch (Exception ex) {
+            long duration = System.currentTimeMillis() - startTime;
+            probeMetrics.recordElasticsearchOperation("findBetween", "failure");
+            probeMetrics.recordElasticsearchOperationDuration("findBetween", duration);
             throw new ProbeRepositoryException("Failed to fetch history for target " + targetId + " between " + start + " - " + end, ex);
         }
     }
 
     @Override
     public Optional<ProbeResult> findLatest() {
+        long startTime = System.currentTimeMillis();
         try {
             SearchResponse<ProbeResult> response = client.search(s -> s
                     .index(this.index)
@@ -151,9 +184,18 @@ public class ElasticProbeRepository implements ProbeRepository {
                             ))
                     , ProbeResult.class);
 
-            return extractFirst(response);
+            Optional<ProbeResult> result = extractFirst(response);
+
+            long duration = System.currentTimeMillis() - startTime;
+            probeMetrics.recordElasticsearchOperation("findLatest", "success");
+            probeMetrics.recordElasticsearchOperationDuration("findLatest", duration);
+
+            return result;
 
         } catch (Exception ex) {
+            long duration = System.currentTimeMillis() - startTime;
+            probeMetrics.recordElasticsearchOperation("findLatest", "failure");
+            probeMetrics.recordElasticsearchOperationDuration("findLatest", duration);
             throw new ProbeRepositoryException("Failed to fetch latest probe result", ex);
         }
     }

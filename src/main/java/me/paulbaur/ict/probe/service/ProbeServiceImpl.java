@@ -2,6 +2,7 @@ package me.paulbaur.ict.probe.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import me.paulbaur.ict.common.metrics.ProbeMetrics;
 import me.paulbaur.ict.common.model.ProbeMethod;
 import me.paulbaur.ict.common.model.ProbeStatus;
 import me.paulbaur.ict.common.logging.LoggingContext;
@@ -32,6 +33,7 @@ public class ProbeServiceImpl implements ProbeService {
     private final ProbeStrategy probeStrategy;
     private final ProbeRepository probeRepository;
     private final TargetRepository targetRepository;
+    private final ProbeMetrics probeMetrics;
 
     public ProbeResult probe(Target target) {
         String probeCycleId = resolveProbeCycleId();
@@ -80,6 +82,20 @@ public class ProbeServiceImpl implements ProbeService {
                 ProbeResult alignedResult = alignProbeCycle(result, probeCycleId);
                 probeRepository.save(alignedResult);
 
+                // Record metrics
+                probeMetrics.recordProbeExecution(
+                        alignedResult.targetId(),
+                        alignedResult.status(),
+                        alignedResult.method()
+                );
+                if (alignedResult.latencyMs() != null && alignedResult.status() == ProbeStatus.UP) {
+                    probeMetrics.recordProbeLatency(
+                            alignedResult.targetId(),
+                            alignedResult.method(),
+                            alignedResult.latencyMs()
+                    );
+                }
+
                 log.info(
                     "Probe completed for target",
                     kv("targetId", target.getId()),
@@ -118,6 +134,14 @@ public class ProbeServiceImpl implements ProbeService {
                         "unexpected error: " + ex.getMessage()
                 );
                 probeRepository.save(failureResult);
+
+                // Record failure metrics
+                probeMetrics.recordProbeExecution(
+                        failureResult.targetId(),
+                        failureResult.status(),
+                        failureResult.method()
+                );
+
                 return failureResult;
             }
         }

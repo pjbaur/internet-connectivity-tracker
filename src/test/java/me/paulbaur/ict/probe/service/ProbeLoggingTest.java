@@ -3,6 +3,7 @@ package me.paulbaur.ict.probe.service;
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import me.paulbaur.ict.common.logging.LogCapture;
+import me.paulbaur.ict.common.metrics.ProbeMetrics;
 import me.paulbaur.ict.common.model.ProbeMethod;
 import me.paulbaur.ict.common.model.ProbeStatus;
 import me.paulbaur.ict.probe.domain.ProbeRequest;
@@ -12,6 +13,9 @@ import me.paulbaur.ict.target.domain.Target;
 import me.paulbaur.ict.target.store.TargetRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -22,10 +26,15 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+@ExtendWith(MockitoExtension.class)
+
 class ProbeLoggingTest {
 
     private static final UUID TARGET_ID = UUID.fromString("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
     private static final Target TARGET = new Target(TARGET_ID, "Logging Target", "example.com", 8080);
+
+    @Mock
+    private ProbeMetrics probeMetrics;
 
     private ProbeStrategyStub probeStrategy;
     private RecordingProbeRepository probeRepository;
@@ -41,7 +50,7 @@ class ProbeLoggingTest {
         targetRepository = new TargetRepositoryStub();
         selector = new RoundRobinTargetSelectorStub();
 
-        probeService = new ProbeServiceImpl(selector, probeStrategy, probeRepository, targetRepository);
+        probeService = new ProbeServiceImpl(selector, probeStrategy, probeRepository, targetRepository, probeMetrics);
     }
 
     @Test
@@ -114,7 +123,8 @@ class ProbeLoggingTest {
                 selector,
                 probeStrategy,
                 new FailingProbeRepository(),
-                targetRepository
+                targetRepository,
+                probeMetrics
         );
 
         try (LogCapture capture = LogCapture.capture(ProbeServiceImpl.class, Level.DEBUG)) {
