@@ -75,6 +75,11 @@ ict:
     port: 9200
     scheme: http
     index: probe-results
+    ilm:
+      policy-name: probe-results-policy
+      hot-phase-days: 30      # Move to warm after 30 days
+      warm-phase-days: 90     # Move to cold after 90 days
+      delete-phase-days: 365  # Delete after 1 year
   logstash:
     host: logstash
     port: 5044
