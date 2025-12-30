@@ -1,4 +1,4 @@
-package me.paulbaur.ict.probe.api;
+package me.paulbaur.ict.probe.api.v1;
 
 import me.paulbaur.ict.common.exception.NotFoundException;
 import me.paulbaur.ict.common.model.ErrorResponse;
@@ -24,22 +24,22 @@ import java.time.format.DateTimeParseException;
 import java.util.List;
 
 /**
- * The ProbeController provides an API for probing internet connectivity.
- * Typically, probing is scheduled, but I want to have an on-demand probe as well.
+ * ProbeController V1 - Versioned API for probe results.
+ * This is the first versioned API endpoint, supporting event-driven architecture and caching.
  */
 @RestController
-@RequestMapping(path = "/api", produces = MediaType.APPLICATION_JSON_VALUE)
+@RequestMapping(path = "/api/v1/probes", produces = MediaType.APPLICATION_JSON_VALUE)
 @Tag(
-        name = "Probe Results",
-        description = "Operations for retrieving current and historical connectivity probe results."
+        name = "Probe Results V1",
+        description = "Version 1 API for retrieving current and historical connectivity probe results with caching support."
 )
-public class ProbeController {
+public class ProbeControllerV1 {
 
     private static final int MAX_LIMIT = 5000;
 
     private final ProbeService probeService;
 
-    public ProbeController(ProbeService probeService) {
+    public ProbeControllerV1(ProbeService probeService) {
         this.probeService = probeService;
     }
 
@@ -55,27 +55,18 @@ public class ProbeController {
             ),
             @ApiResponse(responseCode = "404", description = "No probe result available",
                     content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))
-            ),
-            @ApiResponse(responseCode = "500", description = "Internal server error. TODO: Align controller to return structured ErrorResponse",
-                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))
             )
     })
-    @GetMapping("/probe-results/latest")
+    @GetMapping("/latest")
     public ResponseEntity<ProbeResultDto> latest() {
         return probeService.getLatestResult()
                 .map(result -> ResponseEntity.ok(ProbeResultDto.fromDomain(result)))
                 .orElseThrow(() -> new NotFoundException("No probe result available"));
     }
 
-    /**
-     * Returns the most recent probe results for a given target.
-     * @param targetId the ID of the target to get results for
-     * @param limit the maximum number of results to return
-     * @return a list of probe results
-     */
     @Operation(
             summary = "Get recent probe results for a target",
-            description = "Returns up to `limit` recent probe results for the given targetId."
+            description = "Returns up to `limit` recent probe results for the given targetId. Results are cached."
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "A list of recent probe results",
@@ -86,12 +77,9 @@ public class ProbeController {
             ),
             @ApiResponse(responseCode = "400", description = "Bad request - invalid parameters",
                     content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))
-            ),
-            @ApiResponse(responseCode = "500", description = "Internal server error. TODO: Align controller to return structured ErrorResponse",
-                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))
             )
     })
-    @GetMapping("/probe/targets/{targetId}/recent")
+    @GetMapping("/targets/{targetId}/recent")
     @Cacheable(value = "probe-results", key = "#targetId + '-' + #limit")
     public ResponseEntity<List<ProbeResultDto>> recent(
             @Parameter(description = "Target ID (UUID)") @PathVariable String targetId,
@@ -121,9 +109,6 @@ public class ProbeController {
                     )
             ),
             @ApiResponse(responseCode = "400", description = "Invalid request parameters",
-                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))
-            ),
-            @ApiResponse(responseCode = "500", description = "Internal server error. TODO: Align controller to return structured ErrorResponse",
                     content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class))
             )
     })

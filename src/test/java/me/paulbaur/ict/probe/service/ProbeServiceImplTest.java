@@ -5,6 +5,7 @@ import me.paulbaur.ict.common.model.ProbeMethod;
 import me.paulbaur.ict.common.model.ProbeStatus;
 import me.paulbaur.ict.probe.domain.ProbeRequest;
 import me.paulbaur.ict.probe.domain.ProbeResult;
+import me.paulbaur.ict.probe.event.ProbeResultEventPublisher;
 import me.paulbaur.ict.probe.service.strategy.ProbeStrategy;
 import me.paulbaur.ict.probe.service.strategy.ProbeStrategyFactory;
 import me.paulbaur.ict.target.domain.Target;
@@ -23,6 +24,8 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
 
@@ -30,6 +33,9 @@ class ProbeServiceImplTest {
 
     @Mock
     private ProbeMetrics probeMetrics;
+
+    @Mock
+    private ProbeResultEventPublisher eventPublisher;
 
     private ProbeServiceImpl probeService;
 
@@ -56,7 +62,8 @@ class ProbeServiceImplTest {
                 probeStrategyFactoryStub,
                 probeRepositoryStub,
                 targetRepositoryStub,
-                probeMetrics
+                probeMetrics,
+                eventPublisher
         );
     }
 
@@ -79,9 +86,8 @@ class ProbeServiceImplTest {
         assertThat(probeStrategySpy.getLastRequest().host()).isEqualTo("example.com");
         assertThat(probeStrategySpy.getLastRequest().probeCycleId()).isEqualTo(result.probeCycleId());
 
-        // Verify repository save was called
-        assertThat(probeRepositoryStub.getSavedResults()).hasSize(1);
-        assertThat(probeRepositoryStub.getSavedResults().get(0).probeCycleId()).isEqualTo(result.probeCycleId());
+        // Verify event publisher was called (not repository directly)
+        verify(eventPublisher).publishProbeResult(any(ProbeResult.class));
     }
 
     @Test
@@ -100,9 +106,8 @@ class ProbeServiceImplTest {
         assertThat(result.targetId()).isEqualTo(TEST_TARGET_ID.toString());
         assertThat(result.probeCycleId()).isNotBlank();
 
-        // Verify repository save was called with the failure result
-        assertThat(probeRepositoryStub.getSavedResults()).hasSize(1);
-        assertThat(probeRepositoryStub.getSavedResults().get(0)).isEqualTo(result);
+        // Verify event publisher was called with the failure result
+        verify(eventPublisher).publishProbeResult(any(ProbeResult.class));
     }
 
     @Test
@@ -117,7 +122,7 @@ class ProbeServiceImplTest {
 
         // Assert
         assertThat(probeStrategySpy.getCallCount()).isEqualTo(1);
-        assertThat(probeRepositoryStub.getSavedResults()).hasSize(1);
+        verify(eventPublisher).publishProbeResult(any(ProbeResult.class));
     }
 
     @Test
@@ -130,7 +135,7 @@ class ProbeServiceImplTest {
 
         // Assert
         assertThat(probeStrategySpy.getCallCount()).isZero();
-        assertThat(probeRepositoryStub.getSavedResults()).isEmpty();
+        // No event should be published when no target is available
     }
 
     @Test

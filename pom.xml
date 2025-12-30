@@ -69,6 +69,18 @@
             <version>8.10.1</version>
         </dependency>
 
+        <!-- Redis for caching (Workstream 4) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
+
+        <!-- Spring Cache abstraction (Workstream 4) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-cache</artifactId>
+        </dependency>
+
         <!-- Validation for DTDs -->
         <dependency>
                 <groupId>org.springframework.boot</groupId>

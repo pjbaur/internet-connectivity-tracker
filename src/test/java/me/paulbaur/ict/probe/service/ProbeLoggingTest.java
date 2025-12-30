@@ -8,6 +8,7 @@ import me.paulbaur.ict.common.model.ProbeMethod;
 import me.paulbaur.ict.common.model.ProbeStatus;
 import me.paulbaur.ict.probe.domain.ProbeRequest;
 import me.paulbaur.ict.probe.domain.ProbeResult;
+import me.paulbaur.ict.probe.event.ProbeResultEventPublisher;
 import me.paulbaur.ict.probe.service.strategy.ProbeStrategy;
 import me.paulbaur.ict.probe.service.strategy.ProbeStrategyFactory;
 import me.paulbaur.ict.target.domain.Target;
@@ -37,6 +38,9 @@ class ProbeLoggingTest {
     @Mock
     private ProbeMetrics probeMetrics;
 
+    @Mock
+    private ProbeResultEventPublisher eventPublisher;
+
     private ProbeStrategyStub probeStrategy;
     private ProbeStrategyFactoryStub probeStrategyFactory;
     private RecordingProbeRepository probeRepository;
@@ -53,7 +57,7 @@ class ProbeLoggingTest {
         targetRepository = new TargetRepositoryStub();
         selector = new RoundRobinTargetSelectorStub();
 
-        probeService = new ProbeServiceImpl(selector, probeStrategyFactory, probeRepository, targetRepository, probeMetrics);
+        probeService = new ProbeServiceImpl(selector, probeStrategyFactory, probeRepository, targetRepository, probeMetrics, eventPublisher);
     }
 
     @Test
@@ -127,7 +131,8 @@ class ProbeLoggingTest {
                 probeStrategyFactory,
                 new FailingProbeRepository(),
                 targetRepository,
-                probeMetrics
+                probeMetrics,
+                eventPublisher
         );
 
         try (LogCapture capture = LogCapture.capture(ProbeServiceImpl.class, Level.DEBUG)) {

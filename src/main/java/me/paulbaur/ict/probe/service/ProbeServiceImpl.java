@@ -8,6 +8,7 @@ import me.paulbaur.ict.common.model.ProbeStatus;
 import me.paulbaur.ict.common.logging.LoggingContext;
 import me.paulbaur.ict.probe.domain.ProbeRequest;
 import me.paulbaur.ict.probe.domain.ProbeResult;
+import me.paulbaur.ict.probe.event.ProbeResultEventPublisher;
 import me.paulbaur.ict.probe.service.strategy.ProbeStrategy;
 import me.paulbaur.ict.probe.service.strategy.ProbeStrategyFactory;
 import me.paulbaur.ict.target.domain.Target;
@@ -35,6 +36,7 @@ public class ProbeServiceImpl implements ProbeService {
     private final ProbeRepository probeRepository;
     private final TargetRepository targetRepository;
     private final ProbeMetrics probeMetrics;
+    private final ProbeResultEventPublisher eventPublisher;
 
     public ProbeResult probe(Target target) {
         String probeCycleId = resolveProbeCycleId();
@@ -83,7 +85,9 @@ public class ProbeServiceImpl implements ProbeService {
                 ProbeStrategy strategy = probeStrategyFactory.getStrategy(target);
                 ProbeResult result = strategy.probe(request);
                 ProbeResult alignedResult = alignProbeCycle(result, probeCycleId);
-                probeRepository.save(alignedResult);
+
+                // Publish event instead of directly saving (event-driven architecture)
+                eventPublisher.publishProbeResult(alignedResult);
 
                 // Record metrics
                 probeMetrics.recordProbeExecution(
@@ -133,10 +137,12 @@ public class ProbeServiceImpl implements ProbeService {
                         null,
                         probeCycleId,
                         ProbeStatus.DOWN,
-                        ProbeMethod.TCP, // Assuming TCP, as it's the only strategy for now
+                        ProbeMethod.TCP, // Fallback to TCP on unexpected errors
                         "unexpected error: " + ex.getMessage()
                 );
-                probeRepository.save(failureResult);
+
+                // Publish failure event
+                eventPublisher.publishProbeResult(failureResult);
 
                 // Record failure metrics
                 probeMetrics.recordProbeExecution(

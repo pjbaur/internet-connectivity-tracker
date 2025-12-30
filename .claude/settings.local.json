@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xargs cat:*)",
+      "Bash(mvn clean test:*)",
+      "Bash(mvn dependency:tree:*)",
+      "Bash(xargs jar:*)",
+      "Bash(mvn test:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
+    ]
+  }
+}
