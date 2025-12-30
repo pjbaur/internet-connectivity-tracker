@@ -53,6 +53,17 @@ resilience4j:
         permittedNumberOfCallsInHalfOpenState: 3
 
 ict:
+  notifications:
+    enabled: false  # Set to true to enable webhook notifications
+    providers:
+      webhook:
+        enabled: true
+        timeout-ms: 5000
+        default-url: ""  # Optional: default webhook URL for all targets
+  coordination:
+    leader-election:
+      enabled: false  # Set to true to enable leader election in multi-node deployments
+      lease-time-seconds: 30  # Leadership lease duration
   ratelimit:
     enabled: true
     requests-per-minute: 100

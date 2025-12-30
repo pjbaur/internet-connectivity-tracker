@@ -81,6 +81,19 @@
             <artifactId>spring-boot-starter-cache</artifactId>
         </dependency>
 
+        <!-- Redisson for distributed locks and leader election (Workstream 6) -->
+        <dependency>
+            <groupId>org.redisson</groupId>
+            <artifactId>redisson-spring-boot-starter</artifactId>
+            <version>3.25.2</version>
+        </dependency>
+
+        <!-- WebFlux for WebClient (webhook notifications, Workstream 6) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-webflux</artifactId>
+        </dependency>
+
         <!-- Validation for DTDs -->
         <dependency>
                 <groupId>org.springframework.boot</groupId>
