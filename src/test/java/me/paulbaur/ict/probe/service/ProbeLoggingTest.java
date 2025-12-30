@@ -9,6 +9,7 @@ import me.paulbaur.ict.common.model.ProbeStatus;
 import me.paulbaur.ict.probe.domain.ProbeRequest;
 import me.paulbaur.ict.probe.domain.ProbeResult;
 import me.paulbaur.ict.probe.service.strategy.ProbeStrategy;
+import me.paulbaur.ict.probe.service.strategy.ProbeStrategyFactory;
 import me.paulbaur.ict.target.domain.Target;
 import me.paulbaur.ict.target.store.TargetRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -37,6 +38,7 @@ class ProbeLoggingTest {
     private ProbeMetrics probeMetrics;
 
     private ProbeStrategyStub probeStrategy;
+    private ProbeStrategyFactoryStub probeStrategyFactory;
     private RecordingProbeRepository probeRepository;
     private TargetRepositoryStub targetRepository;
     private RoundRobinTargetSelectorStub selector;
@@ -46,11 +48,12 @@ class ProbeLoggingTest {
     @BeforeEach
     void setUp() {
         probeStrategy = new ProbeStrategyStub();
+        probeStrategyFactory = new ProbeStrategyFactoryStub(probeStrategy);
         probeRepository = new RecordingProbeRepository();
         targetRepository = new TargetRepositoryStub();
         selector = new RoundRobinTargetSelectorStub();
 
-        probeService = new ProbeServiceImpl(selector, probeStrategy, probeRepository, targetRepository, probeMetrics);
+        probeService = new ProbeServiceImpl(selector, probeStrategyFactory, probeRepository, targetRepository, probeMetrics);
     }
 
     @Test
@@ -121,7 +124,7 @@ class ProbeLoggingTest {
     void repository_failure_logsTargetIdAndLimit() {
         ProbeServiceImpl failingService = new ProbeServiceImpl(
                 selector,
-                probeStrategy,
+                probeStrategyFactory,
                 new FailingProbeRepository(),
                 targetRepository,
                 probeMetrics
@@ -144,6 +147,20 @@ class ProbeLoggingTest {
     }
 
     // --- Test doubles ---
+
+    static class ProbeStrategyFactoryStub extends ProbeStrategyFactory {
+        private final ProbeStrategy strategy;
+
+        ProbeStrategyFactoryStub(ProbeStrategy strategy) {
+            super(null, null);
+            this.strategy = strategy;
+        }
+
+        @Override
+        public ProbeStrategy getStrategy(Target target) {
+            return strategy;
+        }
+    }
 
     static class ProbeStrategyStub implements ProbeStrategy {
         private ProbeResult nextResult;

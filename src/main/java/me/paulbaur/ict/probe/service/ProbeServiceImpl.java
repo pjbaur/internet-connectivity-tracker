@@ -9,6 +9,7 @@ import me.paulbaur.ict.common.logging.LoggingContext;
 import me.paulbaur.ict.probe.domain.ProbeRequest;
 import me.paulbaur.ict.probe.domain.ProbeResult;
 import me.paulbaur.ict.probe.service.strategy.ProbeStrategy;
+import me.paulbaur.ict.probe.service.strategy.ProbeStrategyFactory;
 import me.paulbaur.ict.target.domain.Target;
 import me.paulbaur.ict.target.store.TargetRepository;
 
@@ -30,7 +31,7 @@ import java.util.UUID;
 public class ProbeServiceImpl implements ProbeService {
 
     private final RoundRobinTargetSelector targetSelector;
-    private final ProbeStrategy probeStrategy;
+    private final ProbeStrategyFactory probeStrategyFactory;
     private final ProbeRepository probeRepository;
     private final TargetRepository targetRepository;
     private final ProbeMetrics probeMetrics;
@@ -78,7 +79,9 @@ public class ProbeServiceImpl implements ProbeService {
             );
 
             try {
-                ProbeResult result = probeStrategy.probe(request);
+                // Select the appropriate strategy based on target configuration
+                ProbeStrategy strategy = probeStrategyFactory.getStrategy(target);
+                ProbeResult result = strategy.probe(request);
                 ProbeResult alignedResult = alignProbeCycle(result, probeCycleId);
                 probeRepository.save(alignedResult);
 

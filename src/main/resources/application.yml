@@ -52,6 +52,16 @@ ict:
   probe:
     interval-ms: 1000       # 1 second default
     logging-debug: false    # enable DEBUG logs for probe subpackage when true
+    async:
+      enabled: true
+      core-pool-size: 4
+      max-pool-size: 10
+      queue-capacity: 100
+    tcp:
+      timeout-ms: 1000
+    icmp:
+      timeout-ms: 2000
+      packet-size: 32
   elasticsearch:
     host: elasticsearch
     port: 9200

@@ -4,6 +4,7 @@ import java.util.Locale;
 import java.util.Objects;
 import java.util.UUID;
 import io.swagger.v3.oas.annotations.media.Schema;
+import me.paulbaur.ict.common.model.ProbeMethod;
 
 @Schema(description = "A network target that is probed for connectivity; represents a host/port combination monitored by the system")
 public class Target {
@@ -23,12 +24,20 @@ public class Target {
     @Schema(description = "Is the targeet enabled?", example = "true")
     private boolean enabled;
 
+    @Schema(description = "Probe method to use for this target (TCP or ICMP)", example = "TCP")
+    private ProbeMethod probeMethod;
+
+    @Schema(description = "Probe timeout in milliseconds (optional, uses default if not set)", example = "1000")
+    private Integer timeoutMs;
+
     public Target(UUID id, String label, String host, int port) {
         this.id = id;
         this.label = label;
         this.host = host;
         this.port = port;
         this.enabled = true;
+        this.probeMethod = ProbeMethod.TCP; // Default to TCP
+        this.timeoutMs = null; // Use default from configuration
     }
 
     public Target(UUID id, String label, String host, int port, boolean enabled) {
@@ -37,6 +46,18 @@ public class Target {
         this.host = host;
         this.port = port;
         this.enabled = enabled;
+        this.probeMethod = ProbeMethod.TCP; // Default to TCP
+        this.timeoutMs = null; // Use default from configuration
+    }
+
+    public Target(UUID id, String label, String host, int port, boolean enabled, ProbeMethod probeMethod, Integer timeoutMs) {
+        this.id = id;
+        this.label = label;
+        this.host = host;
+        this.port = port;
+        this.enabled = enabled;
+        this.probeMethod = probeMethod != null ? probeMethod : ProbeMethod.TCP;
+        this.timeoutMs = timeoutMs;
     }
 
     public UUID getId() {
@@ -75,6 +96,22 @@ public class Target {
         this.enabled = enabled;
     }
 
+    public ProbeMethod getProbeMethod() {
+        return probeMethod != null ? probeMethod : ProbeMethod.TCP;
+    }
+
+    public void setProbeMethod(ProbeMethod probeMethod) {
+        this.probeMethod = probeMethod;
+    }
+
+    public Integer getTimeoutMs() {
+        return timeoutMs;
+    }
+
+    public void setTimeoutMs(Integer timeoutMs) {
+        this.timeoutMs = timeoutMs;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (o == null || getClass() != o.getClass()) return false;
@@ -95,6 +132,8 @@ public class Target {
                 ", host='" + host + '\'' +
                 ", port=" + port +
                 ", enabled=" + enabled +
+                ", probeMethod=" + probeMethod +
+                ", timeoutMs=" + timeoutMs +
                 '}';
     }
 }

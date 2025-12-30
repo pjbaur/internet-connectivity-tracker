@@ -3,6 +3,7 @@ package me.paulbaur.ict.probe.service;
 import me.paulbaur.ict.common.health.ProbeSchedulerHealthIndicator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -20,6 +21,7 @@ public class ProbeScheduler {
     }
 
     @Scheduled(fixedDelayString = "${ict.probe.interval-ms:1000}")
+    @Async("probeTaskExecutor")
     public void executeProbes() {
         log.debug("Running scheduled probes");
         try {

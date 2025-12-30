@@ -6,6 +6,7 @@ import me.paulbaur.ict.common.model.ProbeStatus;
 import me.paulbaur.ict.probe.domain.ProbeRequest;
 import me.paulbaur.ict.probe.domain.ProbeResult;
 import me.paulbaur.ict.probe.service.strategy.ProbeStrategy;
+import me.paulbaur.ict.probe.service.strategy.ProbeStrategyFactory;
 import me.paulbaur.ict.target.domain.Target;
 import me.paulbaur.ict.target.store.TargetRepository;
 
@@ -34,6 +35,7 @@ class ProbeServiceImplTest {
 
     // Test doubles (spies and stubs)
     private ProbeStrategySpy probeStrategySpy;
+    private ProbeStrategyFactoryStub probeStrategyFactoryStub;
     private ProbeRepositoryStub probeRepositoryStub;
     private TargetRepositoryStub targetRepositoryStub;
     private RoundRobinTargetSelectorStub targetSelectorStub;
@@ -44,13 +46,14 @@ class ProbeServiceImplTest {
     @BeforeEach
     void setUp() {
         probeStrategySpy = new ProbeStrategySpy();
+        probeStrategyFactoryStub = new ProbeStrategyFactoryStub(probeStrategySpy);
         probeRepositoryStub = new ProbeRepositoryStub();
         targetRepositoryStub = new TargetRepositoryStub();
         targetSelectorStub = new RoundRobinTargetSelectorStub();
 
         probeService = new ProbeServiceImpl(
                 targetSelectorStub,
-                probeStrategySpy,
+                probeStrategyFactoryStub,
                 probeRepositoryStub,
                 targetRepositoryStub,
                 probeMetrics
@@ -156,6 +159,20 @@ class ProbeServiceImplTest {
     }
 
     // --- Test Doubles ---
+
+    static class ProbeStrategyFactoryStub extends ProbeStrategyFactory {
+        private final ProbeStrategy strategy;
+
+        ProbeStrategyFactoryStub(ProbeStrategy strategy) {
+            super(null, null);
+            this.strategy = strategy;
+        }
+
+        @Override
+        public ProbeStrategy getStrategy(Target target) {
+            return strategy;
+        }
+    }
 
     static class ProbeStrategySpy implements ProbeStrategy {
         private ProbeRequest lastRequest;
