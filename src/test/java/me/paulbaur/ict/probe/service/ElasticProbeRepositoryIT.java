@@ -1,6 +1,6 @@
 package me.paulbaur.ict.probe.service;
 
-import me.paulbaur.ict.TestElasticsearchContainer;
+import me.paulbaur.ict.TestContainersConfig;
 import me.paulbaur.ict.common.model.ProbeMethod;
 import me.paulbaur.ict.common.model.ProbeStatus;
 import me.paulbaur.ict.probe.domain.ProbeResult;
@@ -8,23 +8,25 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.context.annotation.Import;
+import org.testcontainers.elasticsearch.ElasticsearchContainer;
+import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.time.Instant;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@SpringBootTest
+@SpringBootTest(properties = {
+    "spring.task.scheduling.enabled=false",
+    "ict.elasticsearch.index=probe-results"
+})
+@Testcontainers
+@Import(TestContainersConfig.class)
 public class ElasticProbeRepositoryIT {
 
-    @DynamicPropertySource
-    static void registerProperties(DynamicPropertyRegistry registry) {
-        registry.add("ict.elasticsearch.host", () -> TestElasticsearchContainer.ES.getHost());
-        registry.add("ict.elasticsearch.port", () -> TestElasticsearchContainer.ES.getFirstMappedPort());
-        registry.add("ict.elasticsearch.index", () -> "probe-results");
-    }
+    @Autowired
+    private ElasticsearchContainer elasticsearchContainer;
 
     @Autowired
     ProbeRepository repo;

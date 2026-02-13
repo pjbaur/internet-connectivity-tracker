@@ -1,6 +1,7 @@
 package me.paulbaur.ict.target.api;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import me.paulbaur.ict.TestContainersConfig;
 import me.paulbaur.ict.target.api.dto.TargetRequestDto;
 import me.paulbaur.ict.target.domain.Target;
 import me.paulbaur.ict.target.service.TargetService;
@@ -10,8 +11,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.util.List;
 import java.util.UUID;
@@ -30,6 +33,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest(properties = "spring.task.scheduling.enabled=false")
 @AutoConfigureMockMvc
+@Testcontainers
+@Import(TestContainersConfig.class)
 class TargetControllerIT {
 
     @Autowired
