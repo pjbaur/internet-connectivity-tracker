@@ -14,18 +14,20 @@
         </encoder>
     </appender>
 
-    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>${LOG_FILE}</file>
-        <encoder>
-            <pattern>${LOG_PATTERN}</pattern>
-        </encoder>
-        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
-            <fileNamePattern>logs/ict.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
-            <maxFileSize>10MB</maxFileSize>
-            <maxHistory>14</maxHistory>
-            <totalSizeCap>1GB</totalSizeCap>
-        </rollingPolicy>
-    </appender>
+    <springProfile name="!docker">
+        <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+            <file>${LOG_FILE}</file>
+            <encoder>
+                <pattern>${LOG_PATTERN}</pattern>
+            </encoder>
+            <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+                <fileNamePattern>logs/ict.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+                <maxFileSize>10MB</maxFileSize>
+                <maxHistory>14</maxHistory>
+                <totalSizeCap>1GB</totalSizeCap>
+            </rollingPolicy>
+        </appender>
+    </springProfile>
 
     <springProfile name="json-logs">
         <appender name="JSON_CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
@@ -62,25 +64,16 @@
     </springProfile>
 
     <logger name="me.paulbaur.ict" level="INFO"/>
-
-    <if condition='property("probeDebug").equalsIgnoreCase("true")'>
-        <then>
-            <logger name="me.paulbaur.ict.probe" level="DEBUG"/>
-        </then>
-        <else>
-            <logger name="me.paulbaur.ict.probe" level="INFO"/>
-        </else>
-    </if>
+    <logger name="me.paulbaur.ict.probe" level="${ICT_PROBE_LOG_LEVEL:-INFO}"/>
 
     <root level="INFO">
         <appender-ref ref="CONSOLE"/>
-        <appender-ref ref="FILE"/>
-    </root>
-
-    <springProfile name="json-logs">
-        <root level="INFO">
+        <springProfile name="!docker">
+            <appender-ref ref="FILE"/>
+        </springProfile>
+        <springProfile name="json-logs">
             <appender-ref ref="JSON_CONSOLE"/>
             <appender-ref ref="LOGSTASH"/>
-        </root>
-    </springProfile>
+        </springProfile>
+    </root>
 </configuration>
