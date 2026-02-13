@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration scan="true">
-    <springProperty scope="context" name="probeDebug" source="ict.probe.logging-debug" defaultValue="false"/>
     <springProperty scope="context" name="logstashHost" source="ict.logstash.host" defaultValue="logstash"/>
     <springProperty scope="context" name="logstashPort" source="ict.logstash.port" defaultValue="5044"/>
 
@@ -8,12 +7,14 @@
               value="%d{yyyy-MM-dd'T'HH:mm:ss.SSSX} %-5level [%thread] %logger{36} - %msg | reqId=%X{reqId:-} targetId=%X{targetId:-} probeId=%X{probeId:-} probeCycleId=%X{probeCycleId:-} seedRunId=%X{seedRunId:-}%n"/>
     <property name="LOG_FILE" value="${LOG_FILE:-logs/ict.log}"/>
 
+    <!-- CONSOLE appender - always available -->
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
             <pattern>${LOG_PATTERN}</pattern>
         </encoder>
     </appender>
 
+    <!-- FILE appender - only for local/dev (not Docker) -->
     <springProfile name="!docker">
         <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
             <file>${LOG_FILE}</file>
@@ -29,6 +30,7 @@
         </appender>
     </springProfile>
 
+    <!-- JSON appenders - only when json-logs profile is active -->
     <springProfile name="json-logs">
         <appender name="JSON_CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
             <encoder class="net.logstash.logback.encoder.LoggingEventCompositeJsonEncoder">
@@ -60,20 +62,37 @@
                     <timestamp>@timestamp</timestamp>
                 </fieldNames>
             </encoder>
+            <!-- Graceful handling when Logstash isn't ready yet -->
+            <connectionTimeout>5 seconds</connectionTimeout>
+            <reconnectionDelay>5 seconds</reconnectionDelay>
+            <keepAliveDuration>5 minutes</keepAliveDuration>
         </appender>
     </springProfile>
 
     <logger name="me.paulbaur.ict" level="INFO"/>
     <logger name="me.paulbaur.ict.probe" level="${ICT_PROBE_LOG_LEVEL:-INFO}"/>
 
-    <root level="INFO">
-        <appender-ref ref="CONSOLE"/>
-        <springProfile name="!docker">
+    <!-- Default profile: local/dev with file logging -->
+    <springProfile name="!docker &amp; !json-logs">
+        <root level="INFO">
+            <appender-ref ref="CONSOLE"/>
             <appender-ref ref="FILE"/>
-        </springProfile>
-        <springProfile name="json-logs">
+        </root>
+    </springProfile>
+
+    <!-- Docker profile without JSON logs -->
+    <springProfile name="docker &amp; !json-logs">
+        <root level="INFO">
+            <appender-ref ref="CONSOLE"/>
+        </root>
+    </springProfile>
+
+    <!-- JSON logs profile (typically with docker) -->
+    <springProfile name="json-logs">
+        <root level="INFO">
             <appender-ref ref="JSON_CONSOLE"/>
             <appender-ref ref="LOGSTASH"/>
-        </springProfile>
-    </root>
+        </root>
+    </springProfile>
+
 </configuration>
